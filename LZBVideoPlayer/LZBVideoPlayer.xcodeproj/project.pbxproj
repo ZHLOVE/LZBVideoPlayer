@@ -13,6 +13,7 @@
 		C820F9AD1F03E5530089EE41 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C820F9AB1F03E5530089EE41 /* Main.storyboard */; };
 		C820F9AF1F03E5530089EE41 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C820F9AE1F03E5530089EE41 /* Assets.xcassets */; };
 		C820F9B21F03E5530089EE41 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C820F9B01F03E5530089EE41 /* LaunchScreen.storyboard */; };
+		C820F9BC1F03E5D60089EE41 /* LZBVideoPlayer.m in Sources */ = {isa = PBXBuildFile; fileRef = C820F9BB1F03E5D60089EE41 /* LZBVideoPlayer.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,8 @@
 		C820F9AE1F03E5530089EE41 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C820F9B11F03E5530089EE41 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		C820F9B31F03E5530089EE41 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C820F9BA1F03E5D60089EE41 /* LZBVideoPlayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LZBVideoPlayer.h; sourceTree = "<group>"; };
+		C820F9BB1F03E5D60089EE41 /* LZBVideoPlayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LZBVideoPlayer.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,6 +86,8 @@
 		C820F9B91F03E56C0089EE41 /* LZBVideoPlayer */ = {
 			isa = PBXGroup;
 			children = (
+				C820F9BA1F03E5D60089EE41 /* LZBVideoPlayer.h */,
+				C820F9BB1F03E5D60089EE41 /* LZBVideoPlayer.m */,
 			);
 			path = LZBVideoPlayer;
 			sourceTree = "<group>";
@@ -118,6 +123,7 @@
 				TargetAttributes = {
 					C820F99E1F03E5530089EE41 = {
 						CreatedOnToolsVersion = 8.3.2;
+						DevelopmentTeam = Y2H57HDYD9;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -161,6 +167,7 @@
 				C820F9AA1F03E5530089EE41 /* ViewController.m in Sources */,
 				C820F9A71F03E5530089EE41 /* AppDelegate.m in Sources */,
 				C820F9A41F03E5530089EE41 /* main.m in Sources */,
+				C820F9BC1F03E5D60089EE41 /* LZBVideoPlayer.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -280,6 +287,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = Y2H57HDYD9;
 				INFOPLIST_FILE = LZBVideoPlayer/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.lzbwechat.lzbcoder.LZBVideoPlayer;
@@ -291,6 +299,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = Y2H57HDYD9;
 				INFOPLIST_FILE = LZBVideoPlayer/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.lzbwechat.lzbcoder.LZBVideoPlayer;

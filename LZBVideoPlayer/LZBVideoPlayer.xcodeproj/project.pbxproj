@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C82045A01F0DD0C100264E2F /* LZBVideoCachePathTool.m in Sources */ = {isa = PBXBuildFile; fileRef = C820459F1F0DD0C100264E2F /* LZBVideoCachePathTool.m */; };
+		C82045A31F0DD0D500264E2F /* LZBCacheManger.m in Sources */ = {isa = PBXBuildFile; fileRef = C82045A21F0DD0D500264E2F /* LZBCacheManger.m */; };
+		C82045A61F0DD83600264E2F /* LZBVideoURLResourceLoader.m in Sources */ = {isa = PBXBuildFile; fileRef = C82045A51F0DD83600264E2F /* LZBVideoURLResourceLoader.m */; };
+		C82045A91F0DDCC700264E2F /* LZBVideoDownLoadManger.m in Sources */ = {isa = PBXBuildFile; fileRef = C82045A81F0DDCC700264E2F /* LZBVideoDownLoadManger.m */; };
 		C820F9A41F03E5530089EE41 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = C820F9A31F03E5530089EE41 /* main.m */; };
 		C820F9A71F03E5530089EE41 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = C820F9A61F03E5530089EE41 /* AppDelegate.m */; };
 		C820F9AA1F03E5530089EE41 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = C820F9A91F03E5530089EE41 /* ViewController.m */; };
@@ -17,6 +21,14 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		C820459E1F0DD0C100264E2F /* LZBVideoCachePathTool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LZBVideoCachePathTool.h; sourceTree = "<group>"; };
+		C820459F1F0DD0C100264E2F /* LZBVideoCachePathTool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LZBVideoCachePathTool.m; sourceTree = "<group>"; };
+		C82045A11F0DD0D500264E2F /* LZBCacheManger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LZBCacheManger.h; sourceTree = "<group>"; };
+		C82045A21F0DD0D500264E2F /* LZBCacheManger.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LZBCacheManger.m; sourceTree = "<group>"; };
+		C82045A41F0DD83600264E2F /* LZBVideoURLResourceLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LZBVideoURLResourceLoader.h; sourceTree = "<group>"; };
+		C82045A51F0DD83600264E2F /* LZBVideoURLResourceLoader.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LZBVideoURLResourceLoader.m; sourceTree = "<group>"; };
+		C82045A71F0DDCC700264E2F /* LZBVideoDownLoadManger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LZBVideoDownLoadManger.h; sourceTree = "<group>"; };
+		C82045A81F0DDCC700264E2F /* LZBVideoDownLoadManger.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LZBVideoDownLoadManger.m; sourceTree = "<group>"; };
 		C820F99F1F03E5530089EE41 /* LZBVideoPlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LZBVideoPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C820F9A31F03E5530089EE41 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		C820F9A51F03E5530089EE41 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -88,6 +100,14 @@
 			children = (
 				C820F9BA1F03E5D60089EE41 /* LZBVideoPlayer.h */,
 				C820F9BB1F03E5D60089EE41 /* LZBVideoPlayer.m */,
+				C820459E1F0DD0C100264E2F /* LZBVideoCachePathTool.h */,
+				C820459F1F0DD0C100264E2F /* LZBVideoCachePathTool.m */,
+				C82045A11F0DD0D500264E2F /* LZBCacheManger.h */,
+				C82045A21F0DD0D500264E2F /* LZBCacheManger.m */,
+				C82045A41F0DD83600264E2F /* LZBVideoURLResourceLoader.h */,
+				C82045A51F0DD83600264E2F /* LZBVideoURLResourceLoader.m */,
+				C82045A71F0DDCC700264E2F /* LZBVideoDownLoadManger.h */,
+				C82045A81F0DDCC700264E2F /* LZBVideoDownLoadManger.m */,
 			);
 			path = LZBVideoPlayer;
 			sourceTree = "<group>";
@@ -168,6 +188,10 @@
 				C820F9A71F03E5530089EE41 /* AppDelegate.m in Sources */,
 				C820F9A41F03E5530089EE41 /* main.m in Sources */,
 				C820F9BC1F03E5D60089EE41 /* LZBVideoPlayer.m in Sources */,
+				C82045A91F0DDCC700264E2F /* LZBVideoDownLoadManger.m in Sources */,
+				C82045A61F0DD83600264E2F /* LZBVideoURLResourceLoader.m in Sources */,
+				C82045A01F0DD0C100264E2F /* LZBVideoCachePathTool.m in Sources */,
+				C82045A31F0DD0D500264E2F /* LZBCacheManger.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -326,6 +350,7 @@
 				C820F9B81F03E5530089EE41 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

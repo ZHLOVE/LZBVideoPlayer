@@ -61,15 +61,14 @@
   代理监听下载状态
  */
 @property (nonatomic, weak) id <LZBVideoDownLoadMangerDelegate> downloadDelegate;
-/**
- * 查询是否已经下载完成
- */
-@property (nonatomic, assign) BOOL isFinishLoad;
 /*
  * 视频路径的 scheme，设置scheme
  */
-@property(nonatomic, strong) NSString *scheme;
-
+@property (nonatomic, strong) NSString *scheme;
+/**
+ * 查询是否已经下载完成
+ */
+@property (nonatomic, assign, readonly) BOOL isFinishLoad;
 /**
  * 要下载的文件的URL
  */
@@ -77,7 +76,7 @@
 /**
  * 文件总长度
  */
-@property (nonatomic,assign, readonly) NSUInteger fileLength;
+@property (nonatomic, assign, readonly) NSUInteger fileLength;
 /**
  * 开始下载位置的偏移量
  */
@@ -85,7 +84,7 @@
 /**
  * 已经下载文件的位置
  */
-@property (nonatomic, assign ,readonly) NSUInteger downLoadedOffset;
+@property (nonatomic, assign, readonly) NSUInteger downLoadedOffset;
 /**
  *  下载文件的 mineType 类型
  */

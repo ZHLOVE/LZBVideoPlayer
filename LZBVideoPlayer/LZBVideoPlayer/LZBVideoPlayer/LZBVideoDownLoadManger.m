@@ -17,6 +17,7 @@
 @property (nonatomic, strong) NSOutputStream *outputStream;
 @property (nonatomic, strong) NSString *tempPath;
 
+@property (nonatomic, assign) BOOL isFinishLoad;
 @property (nonatomic, strong) NSURL *url;
 @property (nonatomic, assign) NSUInteger fileLength;
 @property (nonatomic, assign) NSUInteger offset;
@@ -123,6 +124,7 @@
 -(void)downloadSuccessWithURLSession:(NSURLSession *)session task:(NSURLSessionTask *)task
 {
   // 如果下载完成, 就把缓存文件移到保存文件夹
+    self.isFinishLoad = YES;
     NSString *saveFilePath = [LZBVideoCachePathTool getFilePathWithSaveCache];
     NSString *saveFullPath = [saveFilePath stringByAppendingPathComponent:self.fileName];
     NSFileManager *fileManger = [NSFileManager defaultManager];
@@ -138,6 +140,7 @@
             }
         });
     }
+    
     
     //关闭流
     [self.outputStream close];

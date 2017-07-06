@@ -11,8 +11,6 @@
 #import <MobileCoreServices/MobileCoreServices.h>
 
 @interface LZBVideoURLResourceLoader()<LZBVideoDownLoadMangerDelegate>
-
-
 /**
  下载器
  */
@@ -61,6 +59,12 @@
     
 }
 
+-(void)invalidDownload
+{
+    [self.downLoadManger invalidateAndCancel];
+    self.downLoadManger = nil;
+}
+
 #pragma mark - AVAssetResourceLoaderDelegate
 
 /**
@@ -86,6 +90,37 @@
 }
 
 
+#pragma mark -  LZBVideoDownLoadMangerDelegate
+//开始下载
+- (void)manger:(LZBVideoDownLoadManger *)manger startDidReceiveVideoLength:(NSUInteger)videoLength mimeType:(NSString *)mimeType
+{
+  
+}
+
+//正在下载中
+- (void)manager:(LZBVideoDownLoadManger *)manager downingDidReceiveData:(NSData *)data downloadOffset:(NSInteger)offset tempFilePath:(NSString *)tempFilePath
+{
+    [self handlePendingRequests];
+}
+//下载成功
+- (void)manager:(LZBVideoDownLoadManger *)manager didSuccessLoadingWithFileSavePath:(NSString *)saveFilePath
+{
+    self.videoPath = saveFilePath;
+    if([self.delegate respondsToSelector:@selector(didFinishSucessLoadedWithManger:saveVideoPath:)])
+    {
+        [self.delegate didFinishSucessLoadedWithManger:manager saveVideoPath:self.videoPath];
+    }
+}
+
+//下载失败
+- (void)manager:(LZBVideoDownLoadManger *)manager didFailLoadingWithError:(NSError *)error
+{
+    if([self.delegate respondsToSelector:@selector(didFailLoadedWithManger:withError:)])
+    {
+        [self.delegate didFailLoadedWithManger:manager withError:error];
+    }
+}
+
 #pragma mark - pravite
 //处理加载请求
 - (void)handleLoadingRequest:(AVAssetResourceLoadingRequest *)loadingRequest
@@ -103,12 +138,12 @@
     }
     else
     {
-       if(self.downLoadManger.downLoadingOffset > 0)
+       if(self.downLoadManger.downLoadedOffset > 0)
        {
            [self handlePendingRequests];
        }
         // 如果新的rang的起始位置比当前缓存的位置还大300k，则重新按照range请求数据
-        if (self.downLoadManger.offset + self.downLoadManger.downLoadingOffset + 1024 * 300 < range.location ||
+        if (self.downLoadManger.offset + self.downLoadManger.downLoadedOffset + 1024 * 300 < range.location ||
             // 如果往回拖也重新请求
             range.location < self.downLoadManger.offset) {
             [self.downLoadManger setUrl:interuputURL offset:range.location];
@@ -156,24 +191,22 @@
     long long startOffset = dataRequest.requestedOffset;
     if(dataRequest.currentOffset != 0)
         startOffset = dataRequest.currentOffset;
-    if((self.downLoadManger.offset + self.downLoadManger.downLoadingOffset) < startOffset)
+    if((self.downLoadManger.offset + self.downLoadManger.downLoadedOffset) < startOffset)
         return NO;
     if(startOffset < self.downLoadManger.offset)
         return NO;
     
     NSData *fileData = [NSData dataWithContentsOfFile:self.videoPath options:NSDataReadingMappedIfSafe error:nil];
-    NSInteger unreadBytes = self.downLoadManger.downLoadingOffset - self.downLoadManger.offset - (NSInteger)startOffset;
-    NSUInteger numberOfBytesToRespondWith = MIN((NSUInteger)dataRequest.requestedLength, unreadBytes);
-    [dataRequest respondWithData:[fileData subdataWithRange:NSMakeRange((NSUInteger)startOffset- self.downLoadManger.offset, (NSUInteger)numberOfBytesToRespondWith)]];
+    NSInteger unreadBytes = self.downLoadManger.downLoadedOffset - self.downLoadManger.offset - (NSInteger)startOffset;
+    NSUInteger numberOfBytesToRespond = MIN((NSUInteger)dataRequest.requestedLength, unreadBytes);
+    [dataRequest respondWithData:[fileData subdataWithRange:NSMakeRange((NSUInteger)startOffset- self.downLoadManger.offset, (NSUInteger)numberOfBytesToRespond)]];
     
+    //需求的长度
     long long endOffset = dataRequest.requestedOffset + dataRequest.requestedLength;
-    BOOL didRespondFully = (self.downLoadManger.offset + self.downLoadManger.downLoadingOffset) >= endOffset;
+    BOOL didRespondFully = (self.downLoadManger.offset + self.downLoadManger.downLoadedOffset) >= endOffset;
     
     return didRespondFully;
-
 }
-
-
 
 - (NSMutableArray *)appendingRequests
 {

@@ -45,4 +45,9 @@
  @return fix URL
  */
 - (NSURL *)getSchemeVideoURL:(NSURL *)url;
+
+/**
+ * 取消当前下载工具的下载操作, 并且释放下载工具, 避免多个下载请求同时并存
+ */
+-(void)invalidDownload;
 @end

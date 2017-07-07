@@ -11,6 +11,7 @@
 #import "LZBVideoCachePathTool.h"
 #import "LZBVideoURLResourceLoader.h"
 #import "LZBCacheManger.h"
+#import "LZBPlayerBottomControlView.h"
 
 NSString *const LZBVideoPlayerPropertyStatus = @"status";
 NSString *const LZBVideoPlayerPropertyLoadedTimeRanges = @"loadedTimeRanges";
@@ -38,6 +39,8 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 @property (nonatomic, assign) BOOL   isFinishLoad; //是否下载完毕
 @property (nonatomic, assign) BOOL   isPauseByUser; //是否被用户暂停
 @property (nonatomic, assign) BOOL    isLocalVideo; //是否播放本地文件
+
+@property (nonatomic, strong) LZBPlayerBottomControlView *bottomControllView; //底部控制操作View
 
 @end
 
@@ -119,7 +122,8 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
                 [self.currentPlayer replaceCurrentItemWithPlayerItem:self.currentPlayerItem];
             }
             self.currentPlayerLayer   = [AVPlayerLayer playerLayerWithPlayer:self.currentPlayer];
-            self.currentPlayerLayer.frame = CGRectMake(0, 0, showView.bounds.size.width, showView.bounds.size.height);
+            CGFloat currentPlayerLayerHeight = showView.bounds.size.height - [LZBPlayerBottomControlView getPlayerBottomHeight];
+            self.currentPlayerLayer.frame = CGRectMake(0, 0, showView.bounds.size.width, currentPlayerLayerHeight);
         }
         
     }
@@ -154,6 +158,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 {
     [LZBCacheManger clearAllVideoCache];
 }
+
 
 
 
@@ -219,6 +224,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
             [self.currentPlayer play];
 //            self.player.muted = self.mute;
 //            [self handleShowViewSublayers];
+            [self setupUI];
         }
             break;
         case AVPlayerItemStatusUnknown:
@@ -273,6 +279,16 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
   
 }
 
+#pragma mark - UI
+//初始化
+- (void)setupUI
+{
+    [self.showSuperView.layer addSublayer:self.currentPlayerLayer];
+    [self.showSuperView addSubview:self.bottomControllView];
+    self.bottomControllView.frame = CGRectMake(0, CGRectGetMaxY(self.currentPlayerLayer.frame), self.showSuperView.bounds.size.width, self.showSuperView.bounds.size.height - CGRectGetMaxY(self.currentPlayerLayer.frame));
+}
+
+
 
 #pragma mark - pravite
 //数据缓存加载中
@@ -323,7 +339,8 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
         [self.currentPlayer replaceCurrentItemWithPlayerItem:self.currentPlayerItem];
     }
     self.currentPlayerLayer   = [AVPlayerLayer playerLayerWithPlayer:self.currentPlayer];
-    self.currentPlayerLayer.frame = CGRectMake(0, 0, showView.bounds.size.width, showView.bounds.size.height);
+    CGFloat currentPlayerLayerHeight = showView.bounds.size.height - [LZBPlayerBottomControlView getPlayerBottomHeight];
+    self.currentPlayerLayer.frame = CGRectMake(0, 0, showView.bounds.size.width, currentPlayerLayerHeight);
 }
 
 - (void)addObserversOnce
@@ -401,4 +418,22 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [self resetParam];
 }
+
+
+#pragma mark- lazy
+- (LZBPlayerBottomControlView *)bottomControllView
+{
+  if(_bottomControllView == nil)
+  {
+      _bottomControllView = [LZBPlayerBottomControlView new];
+  }
+    return _bottomControllView;
+}
+
+- (UIImage *)imageNamed:(NSString *)imageName
+{
+    NSString *path = [[NSBundle mainBundle] pathForResource:@"PlayerImage" ofType:@"bundle"];
+    return [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.png", imageName]]];
+}
+
 @end

@@ -128,6 +128,8 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
         
     }
     
+    [self setupUI];
+    
 }
 
 - (void)resume

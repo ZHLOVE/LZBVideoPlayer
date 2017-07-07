@@ -26,6 +26,7 @@
        [self addSubview:self.lastButton];
        [self addSubview:self.nextButton];
        [self addSubview:self.fullScreenButton];
+       self.backgroundColor = [UIColor blueColor];
    }
     return self;
 }
@@ -36,18 +37,18 @@
     CGSize imageSize = [self imageWithNamed:@"Expression_81"].size;
     self.playPasueButton.frame = CGRectMake((self.bounds.size.width - imageSize.width)*0.5 , self.bounds.size.height -imageSize.height , imageSize.width, imageSize.height);
     self.lastButton.bounds = self.playPasueButton.bounds;
-    self.lastButton.center = CGPointMake(self.playPasueButton.center.x - 30 , self.playPasueButton.center.y);
+    self.lastButton.center = CGPointMake(self.playPasueButton.center.x - 50 , self.playPasueButton.center.y);
     
     self.nextButton.bounds = self.playPasueButton.bounds;
-    self.nextButton.center = CGPointMake(self.playPasueButton.center.x + 30 , self.playPasueButton.center.y);
+    self.nextButton.center = CGPointMake(self.playPasueButton.center.x + 50 , self.playPasueButton.center.y);
     
     self.fullScreenButton.bounds = self.playPasueButton.bounds;
     self.fullScreenButton.center = CGPointMake(self.bounds.size.width - imageSize.width, self.playPasueButton.center.y);
     
-    self.currentTimeLabel.frame = CGRectMake(20, 20, 50, 40);
-    self.totalTimeLabel.frame = CGRectMake(self.bounds.size.width -20, 20, 50, 40);
-    self.slider.frame = CGRectMake(CGRectGetMaxX(self.currentTimeLabel.frame) + 10, 0, self.bounds.size.width - 60, 30);
-    self.progressView.frame= CGRectMake(CGRectGetMaxX(self.currentTimeLabel.frame) + 10, 0, self.bounds.size.width - 60, 10);
+    self.currentTimeLabel.frame = CGRectMake(10, 0, 40, 30);
+    self.totalTimeLabel.frame = CGRectMake(self.bounds.size.width -10 - 30, 0, 40, 30);
+    self.slider.frame = CGRectMake(CGRectGetMaxX(self.currentTimeLabel.frame) + 10, 0, self.bounds.size.width - 2 *CGRectGetMaxX(self.currentTimeLabel.frame) -20, 30);
+    self.progressView.frame= CGRectMake(self.slider.frame.origin.x, self.slider.bounds.size.height *0.5, self.slider.bounds.size.width, 10);
     
 }
 
@@ -65,6 +66,7 @@
       _currentTimeLabel.textColor = [UIColor whiteColor];
       _currentTimeLabel.font = [UIFont systemFontOfSize:10.0];
       _currentTimeLabel.textAlignment = NSTextAlignmentCenter;
+      _currentTimeLabel.text = @"00:00";
   }
     return _currentTimeLabel;
 }
@@ -77,6 +79,7 @@
         _totalTimeLabel.textColor = [UIColor whiteColor];
         _totalTimeLabel.font = [UIFont systemFontOfSize:10.0];
         _totalTimeLabel.textAlignment = NSTextAlignmentCenter;
+        _totalTimeLabel.text = @"30:40";
     }
     return _totalTimeLabel;
 }

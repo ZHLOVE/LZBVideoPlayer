@@ -7,23 +7,32 @@
 //
 
 #import "ViewController.h"
+#import "LZBVideoPlayer.h"
 
 @interface ViewController ()
-
+@property (nonatomic, strong) UIView *showView;
 @end
 
 @implementation ViewController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    // Do any additional setup after loading the view, typically from a nib.
+    [self.view addSubview:self.showView];
+    self.showView.frame = CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.width);
+    [[LZBVideoPlayer sharedInstance] playWithURL:[NSURL URLWithString:@"http://www.baidu.com"] showInView:self.showView];
 }
 
 
-- (void)didReceiveMemoryWarning {
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
-}
 
+
+- (UIView *)showView
+{
+  if(_showView == nil)
+  {
+      _showView = [UIView new];
+      _showView.backgroundColor = [UIColor greenColor];
+  }
+    return _showView;
+}
 
 @end

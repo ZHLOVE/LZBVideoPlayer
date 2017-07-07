@@ -8,6 +8,7 @@
 
 #import "LZBVideoDownLoadManger.h"
 #import "LZBVideoCachePathTool.h"
+#import "LZBCacheManger.h"
 
 #define TIME_OUT_INTERVAL   10.0  //超时时间
 
@@ -224,6 +225,10 @@
 
 - (BOOL)checkDiskFreeSize:(NSUInteger)length
 {
+    unsigned long long freeDiskSize = [LZBCacheManger getFreeSizeFromDisk];
+    if(freeDiskSize < length){
+       return NO;
+    }
     return YES;
 }
 @end

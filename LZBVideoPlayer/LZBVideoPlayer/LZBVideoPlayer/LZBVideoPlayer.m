@@ -10,6 +10,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import "LZBVideoCachePathTool.h"
 #import "LZBVideoURLResourceLoader.h"
+#import "LZBCacheManger.h"
 
 NSString *const LZBVideoPlayerPropertyStatus = @"status";
 NSString *const LZBVideoPlayerPropertyLoadedTimeRanges = @"loadedTimeRanges";
@@ -125,6 +126,39 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     
 }
 
+- (void)resume
+{
+    if(self.currentPlayerItem == nil) return;
+    [self.currentPlayer play];
+}
+
+- (void)pause
+{
+    if(self.currentPlayerItem == nil) return;
+    [self.currentPlayer pause];
+}
+
+- (void)stop
+{
+    if(self.currentPlayer == nil) return;
+    [self.currentPlayer pause];
+    [self.currentPlayer cancelPendingPrerolls];
+}
+
+- (void)clearVideoCacheForUrl:(NSURL *)url
+{
+    [LZBCacheManger clearVideoFromCacheWithURL:url];
+}
+
+-(void)clearAllVideoCache
+{
+    [LZBCacheManger clearAllVideoCache];
+}
+
+
+
+
+
 #pragma mark - KVO监听
 //收到内存警告
 -(void)receiveMemoryWarning{
@@ -231,7 +265,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 #pragma mark - LZBVideoURLResourceLoaderDelegate
 - (void)didFinishSucessLoadedWithManger:(LZBVideoDownLoadManger *)manger saveVideoPath:(NSString *)videoPath
 {
-    
+     //检测磁盘是否够用
 }
 
 - (void)didFailLoadedWithManger:(LZBVideoDownLoadManger *)manger withError:(NSError *)error
@@ -331,5 +365,40 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
       [_currentPlayerLayer removeFromSuperlayer];
   }
     _currentPlayerLayer = currentPlayerLayer;
+}
+
+//复位原来的参数
+- (void)resetParam
+{
+    [self stop];
+    if(self.currentPlayerLayer != nil)
+    {
+        [self.currentPlayerLayer removeFromSuperlayer];
+        self.currentPlayerLayer = nil;
+    }
+    
+    [self.videoURLAsset.resourceLoader setDelegate:nil queue:dispatch_get_main_queue()];
+    self.videoURLAsset = nil;
+    self.currentPlayerItem = nil;
+    self.currentPlayer = nil;
+    self.playPathURL = nil;
+    [self.resourceLoader invalidDownload];
+    self.resourceLoader = nil;
+}
+
+
+//检测剩余的空间
+- (void)checkDiskSize{
+    __weak typeof(self) weakSelf = self;
+    [LZBCacheManger getAllVideoSize:^(unsigned long long total) {
+         if(total > weakSelf.maxCacheSize)
+             [weakSelf clearAllVideoCache];
+    }];
+}
+
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [self resetParam];
 }
 @end

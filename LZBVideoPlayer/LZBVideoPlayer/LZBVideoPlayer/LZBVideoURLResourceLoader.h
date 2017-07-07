@@ -24,7 +24,7 @@
 
 
 /**
-  下载失败，传出错误元原因
+  下载失败，传出错误原因
  */
 - (void)didFailLoadedWithManger:(LZBVideoDownLoadManger *)manger withError:(NSError *)error;
 

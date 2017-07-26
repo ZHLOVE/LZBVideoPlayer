@@ -2,35 +2,54 @@
 //  LZBVideoPlayer.h
 //  LZBVideoPlayer
 //
-//  Created by zibin on 2017/6/28.
+//  Created by zibin on 2016/6/28.
 //  Copyright © 2017年 Apple. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
+@class LZBVideoPlayer;
+
+typedef NS_ENUM(NSInteger,LZBVideoPlayerState)
+{
+    LZBVideoPlayerState_None        = 0,  //无状态
+    LZBVideoPlayerState_Loading     = 1, //加载中状态
+    LZBVideoPlayerState_ReadyToPlay = 2,  //准备播放
+    LZBVideoPlayerState_Playing     = 3, //正在播放状态
+    LZBVideoPlayerState_Stoped      = 4, //停止状态
+    LZBVideoPlayerState_Pause       = 5,  //暂停状态
+    LZBVideoPlayerState_Failed      = 6,  //失败状态
+    
+};
+
+
 @protocol LZBVideoPlayerLoadingDelegate <NSObject>
+
 @required
 - (void)startAnimating;
 - (void)stopAnimating;
 
 @end
 
-typedef NS_ENUM(NSInteger,LZBVideoPlayerState)
-{
-    LZBVideoPlayerState_None = 0,  //无状态
-    LZBVideoPlayerState_Loading = 1, //加载中状态
-    LZBVideoPlayerState_Playing = 2, //正在播放状态
-    LZBVideoPlayerState_Stoped = 3, //停止状态
-    LZBVideoPlayerState_Pause = 4,  //暂停状态
-    
-};
+@protocol LZBVideoPlayerDelegate <NSObject>
+
+//代理监听状态改变
+- (void)videoPlayer:(LZBVideoPlayer *)player didStateChange:(LZBVideoPlayerState)state;
+@end
+
+
 
 
 @interface LZBVideoPlayer : NSObject
 
 
 #pragma mark - Open  Protery
+
+/**
+  播放器监听代理
+ */
+@property (nonatomic, weak)  id <LZBVideoPlayerDelegate> delegate;
 
 /**
   默认是YES
@@ -52,7 +71,7 @@ typedef NS_ENUM(NSInteger,LZBVideoPlayerState)
   isSupportDownLoadedCache = YES 有效
   最大磁盘缓存. 默认为 1G, 超过 1G 将自动清空所有视频磁盘缓存.
  */
-@property(nonatomic, assign)unsigned long long  maxCacheSize;
+@property(nonatomic, assign) unsigned long long  maxCacheSize;
 
 /**
  视频播放状态
@@ -62,22 +81,22 @@ typedef NS_ENUM(NSInteger,LZBVideoPlayerState)
 /**
  缓冲进度
  */
-@property (nonatomic, assign,readonly) CGFloat       loadedProgress;
+@property (nonatomic, assign, readonly) CGFloat   loadedProgress;
 
 /**
   视频总时间
  */
-@property (nonatomic, assign,readonly) CGFloat       totalTime;
+@property (nonatomic, assign, readonly) CGFloat   totalTime;
 
 /**
  当前播放时间
  */
-@property (nonatomic, assign,readonly) CGFloat       currentTime;
+@property (nonatomic, assign, readonly) CGFloat   currentTime;
 
 /**
  播放进度 0~1
  */
-@property (nonatomic, assign,readonly) CGFloat       progress;
+@property (nonatomic, assign, readonly) CGFloat   progress;
 
 
 

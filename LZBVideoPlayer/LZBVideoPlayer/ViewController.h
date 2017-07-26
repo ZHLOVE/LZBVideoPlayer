@@ -2,7 +2,7 @@
 //  ViewController.h
 //  LZBVideoPlayer
 //
-//  Created by zibin on 2017/6/28.
+//  Created by zibin on 2016/6/28.
 //  Copyright © 2017年 Apple. All rights reserved.
 //
 

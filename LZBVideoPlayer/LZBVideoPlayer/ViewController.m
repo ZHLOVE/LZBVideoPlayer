@@ -2,7 +2,7 @@
 //  ViewController.m
 //  LZBVideoPlayer
 //
-//  Created by zibin on 2017/6/28.
+//  Created by zibin on 2016/6/28.
 //  Copyright © 2017年 Apple. All rights reserved.
 //
 
@@ -19,7 +19,7 @@
     [super viewDidLoad];
     [self.view addSubview:self.showView];
     self.showView.frame = CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.width);
-    [[LZBVideoPlayer sharedInstance] playWithURL:[NSURL URLWithString:@"http://www.baidu.com"] showInView:self.showView];
+    [[LZBVideoPlayer sharedInstance] playWithURL:[NSURL URLWithString:@"http://120.25.226.186:32812/resources/videos/minion_01.mp4"] showInView:self.showView];
 }
 
 

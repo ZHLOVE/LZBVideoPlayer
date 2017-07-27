@@ -8,130 +8,69 @@
 
 #import "LZBVideoPlayer.h"
 #import <AVFoundation/AVFoundation.h>
-#import "LZBVideoCachePathTool.h"
 #import "LZBVideoURLResourceLoader.h"
-#import "LZBCacheManger.h"
 #import "LZBPlayerBottomControlView.h"
+#import "LZBVideoFileManger.h"
+
+static LZBVideoPlayer *_instance;
 
 NSString *const LZBVideoPlayerPropertyStatus = @"status";
 NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyToKeepUp";
 
 
 @interface LZBVideoPlayer() <LZBVideoURLResourceLoaderDelegate>
-{
-    BOOL _isUserPause;  //用户手动暂停
-}
 
 @property (nonatomic, strong)  NSURL *playPathURL; //播放视频url
 @property (nonatomic, assign)  BOOL isAddObserver; //是否添加了监听，只增加一次
-@property (nonatomic, weak)   UIView *showSuperView; //显示在父类View
 
 @property (nonatomic, strong)  AVURLAsset *videoURLAsset;  //当前播放视频网络请求URL资源
 @property (nonatomic, strong) AVPlayerItem *currentPlayerItem; //当前正在播放视频的Item
-@property (nonatomic, strong) AVPlayerLayer *currentPlayerLayer; //当前图像层
 @property (nonatomic, strong) AVPlayer *currentPlayer; //当前播放器
 
 @property (nonatomic, strong) LZBVideoURLResourceLoader *resourceLoader;  // 数据源
-@property (nonatomic, assign) BOOL   isFinishLoad; //是否下载完毕
+
 @property (nonatomic, assign) BOOL   isPauseByUser; //是否被用户暂停
-@property (nonatomic, assign) BOOL    isLocalVideo; //是否播放本地文件
 
-@property (nonatomic, strong) LZBPlayerBottomControlView *bottomControllView; //底部控制操作View
-
-@property (nonatomic, strong) NSTimer *timer;  //定时刷新UI
 @end
 
 @implementation LZBVideoPlayer
-
-+ (instancetype)sharedInstance
-{
-    return [[self alloc]init];
-}
-
-+(instancetype)allocWithZone:(struct _NSZone *)zone{
-    static id _shareInstance;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        _shareInstance = [super allocWithZone:zone];
-    });
-    return _shareInstance;
-}
-- (instancetype)init
-{
-   if(self = [super init])
-   {
-       self.stopWhenAppDidEnterBackground = YES;
-       self.isSupportDownLoadedCache = YES;
-       self.maxCacheSize = 1024*1024*1024;
-       [self addObserversOnce];
-       [self startTimer];
-   }
-    return self;
-}
-
-
-
 #pragma mark -Open  API
 
-- (void)playWithURL:(NSURL *)url showInView:(UIView *)showView
+- (void)playWithURL:(NSURL *)url isSupportCache:(BOOL)isSupportCache
 {
-    //1.检测参数
-    if(![self checkIsCorrectWithURL:url]) return;
-    if(showView == nil) return;
-    self.showSuperView = showView;
-    
+    //1.检测容错
     if( self.currentPlayer && [self.playPathURL isEqual:url])
     {
         [self resume];
-        
         return;
     }
     
+    if(![self checkIsCorrectWithURL:url]) return;
+   
     //2.检测URL本地还是网络,播放URL
     if(![self.playPathURL.absoluteString hasPrefix:@"http"])
     {
        //本地视频
-        [self playerLocationWithDownLoadVideo:self.playPathURL showInView:showView];
+        [self playerLocationWithDownLoadVideo:self.playPathURL];
     }
     else
     {
-        //网络视频是否已经下载，如果已经下载，就直接播放本地
-        NSString *videoName = [LZBVideoCachePathTool getFileNameWithURL:self.playPathURL];
-        //从下载的文件路径中获取保存的文件夹
-        NSString *folder = [LZBVideoCachePathTool getFilePathWithSaveCache];
-        //拼接路径
-        NSString *localFilePath = [folder stringByAppendingPathComponent:videoName];
-        NSFileManager *fileManger = [NSFileManager defaultManager];
-        //如果路径路径存在，则文件已经下载好，那么直接播放，如果未下载好，就从网络加载
-        if([fileManger fileExistsAtPath:localFilePath])
-        {
-          self.playPathURL = [NSURL fileURLWithPath:localFilePath];
-          [self playerLocationWithDownLoadVideo:self.playPathURL showInView:showView];
-        }
+        //采用resourceLoader给播放器补充数据
+        NSURL *tempVideoURL = nil;
+        if(isSupportCache)
+            tempVideoURL = [self.resourceLoader getVideoResourceLoaderSchemeWithURL:self.playPathURL];
         else
-        {
-            //采用resourceLoader给播放器补充数据
-            NSURL *tempVideoURL = nil;
-            self.resourceLoader = [[LZBVideoURLResourceLoader alloc]init];
-            self.resourceLoader.delegate = self;
-            if(self.isSupportDownLoadedCache)
-                tempVideoURL = [self.resourceLoader getSchemeVideoURL:self.playPathURL];
-            else
-                tempVideoURL = self.playPathURL;
-            self.videoURLAsset  = [AVURLAsset URLAssetWithURL:tempVideoURL options:nil];
-            [self.videoURLAsset.resourceLoader setDelegate:self.resourceLoader queue:dispatch_get_main_queue()];
-            
-            self.currentPlayerItem  = [AVPlayerItem playerItemWithAsset:self.videoURLAsset];
-            if (!self.currentPlayer) {
-                self.currentPlayer = [AVPlayer playerWithPlayerItem:self.currentPlayerItem];
-            } else {
-                [self.currentPlayer replaceCurrentItemWithPlayerItem:self.currentPlayerItem];
-            }
-            self.currentPlayerLayer   = [AVPlayerLayer playerLayerWithPlayer:self.currentPlayer];
-            CGFloat currentPlayerLayerHeight = showView.bounds.size.height - [LZBPlayerBottomControlView getPlayerBottomHeight];
-            self.currentPlayerLayer.frame = CGRectMake(0, 0, showView.bounds.size.width, currentPlayerLayerHeight);
-        }
+            tempVideoURL = self.playPathURL;
+        self.videoURLAsset  = [AVURLAsset URLAssetWithURL:tempVideoURL options:nil];
+        [self.videoURLAsset.resourceLoader setDelegate:self.resourceLoader queue:dispatch_get_main_queue()];
         
+        self.currentPlayerItem  = [AVPlayerItem playerItemWithAsset:self.videoURLAsset];
+        if (!self.currentPlayer) {
+            self.currentPlayer = [AVPlayer playerWithPlayerItem:self.currentPlayerItem];
+        } else {
+            [self.currentPlayer replaceCurrentItemWithPlayerItem:self.currentPlayerItem];
+        }
+        self.currentPlayerLayer   = [AVPlayerLayer playerLayerWithPlayer:self.currentPlayer];
     }
 }
 
@@ -139,7 +78,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 {
     if(self.currentPlayerItem == nil) return;
     [self.currentPlayer play];
-    _isUserPause = NO;
+    self.isPauseByUser = NO;
     if(self.currentPlayer.currentItem && self.currentPlayer.currentItem.playbackLikelyToKeepUp)
     {
         self.state = LZBVideoPlayerState_Playing;
@@ -150,7 +89,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 {
     if(self.currentPlayerItem == nil) return;
     [self.currentPlayer pause];
-    _isUserPause = YES;
+    self.isPauseByUser = YES;
     if(self.currentPlayer.currentItem)
         self.state = LZBVideoPlayerState_Pause;
 }
@@ -165,22 +104,51 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     self.currentPlayer = nil;
 }
 
-- (void)clearVideoCacheForUrl:(NSURL *)url
+- (void)seekWithTimeDiffer:(NSTimeInterval)differ
 {
-    [LZBCacheManger clearVideoFromCacheWithURL:url];
+    //1.获取总时长
+    NSTimeInterval totalTimeSec = [self totalTime];
+    
+    // 2.获取当前时长
+    NSTimeInterval currentTimeSec = [self currentTime];
+    
+    //3.计算快进和快退时长
+    NSTimeInterval result = currentTimeSec + differ;
+    if(result < 0) result = 0;
+    if(result > totalTimeSec) result =  totalTimeSec;
+    
+    //4.播放
+    [self seekWithProgress:result / totalTimeSec];
+
 }
 
--(void)clearAllVideoCache
+
+- (void)seekWithProgress:(CGFloat)progress
 {
-    [LZBCacheManger clearAllVideoCache];
+     if(progress < 0 || progress > 1) return;
+    //1.获取总时长
+    NSTimeInterval totalTimeSec = [self totalTime];
+    
+    //2..需要播放的进度
+    NSTimeInterval requireTimeSec = totalTimeSec * progress;
+    CMTime currentTime = CMTimeMake(requireTimeSec, 1.0);
+    
+    //3.播放
+     __weak typeof(self) weakSelf = self;
+    [self.currentPlayer seekToTime:currentTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
+        if(finished){
+            NSLog(@"拖动到-----%f",CMTimeGetSeconds(currentTime));
+            //播放结束的时候，不会自动调用播放，需要手动调用
+            [weakSelf resume];
+        }
+        else
+        {
+            NSLog(@"取消加载");
+        }
+    }];
 }
-
-
-
-
-
-
 #pragma mark - KVO监听
+
 //收到内存警告
 -(void)receiveMemoryWarning{
     NSAssert(1, @"receiveMemoryWarning, 内存警告");
@@ -224,16 +192,12 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     }
 }
 
-
-#pragma mark - KVO状态监听处理
 - (void)monitorPropertyStatus:(AVPlayerItemStatus)itemStatus
 {
     switch (itemStatus) {
         case AVPlayerItemStatusReadyToPlay:{
             //准备播放
             self.state = LZBVideoPlayerState_ReadyToPlay;
-            // 显示图像逻辑
-            [self setupUI];
             [self resume];
         }
             break;
@@ -251,7 +215,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 {
     if (keepUp){
         //如果不是用户手动暂停，可以播放，用户手动操作级别最高
-        if(!_isUserPause)
+        if(!self.isPauseByUser)
         {
             [self resume];
         }
@@ -266,29 +230,17 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 
 
 
-#pragma mark - 定时器刷新UI
-- (void)startTimer
-{
-    self.timer = [NSTimer timerWithTimeInterval:1.0 target:self selector:@selector(updateUI) userInfo:nil repeats:YES];
-    [[NSRunLoop mainRunLoop] addTimer:self.timer forMode:NSRunLoopCommonModes];
-}
-
-- (void)stopTimer
-{
-    [self.timer invalidate];
-    self.timer = nil;
-}
-
-- (void)updateUI
-{
-    //更新UI
-    [self updateCurrentTimeLabel:self.currentTime];  //当前时间
-    [self updateTotalTimeLabel:self.totalTime]; //当前总时间
-    [self.bottomControllView.progressView setProgress:self.loadedProgress animated:YES]; //当前加载进度
-    [self updateSlideValue:self.progress]; //当前播放进度
-}
 
 #pragma mark - 数据传递/事件处理
+-(void)setCurrentPlayerLayer:(AVPlayerLayer *)currentPlayerLayer
+{
+    if(_currentPlayerLayer != nil)
+    {
+        [_currentPlayerLayer removeFromSuperlayer];
+    }
+    _currentPlayerLayer = currentPlayerLayer;
+}
+
 
 - (void)setState:(LZBVideoPlayerState)state
 {
@@ -299,6 +251,37 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     {
        [self.delegate videoPlayer:self didStateChange:_state];
     }
+}
+
+//总时间
+- (NSTimeInterval)totalTime
+{
+    CMTime totalTime = self.currentPlayer.currentItem.duration;
+    NSTimeInterval totalTimeSec = CMTimeGetSeconds(totalTime);
+    if(isnan(totalTimeSec))
+        return 0;
+    return totalTimeSec;
+}
+
+- (NSString *)totalTimeFormat
+{
+    long totalFmtTime = ceil(self.totalTime);
+    return [self timeFormatWithTime:totalFmtTime];
+}
+//当前时间
+- (NSTimeInterval)currentTime
+{
+    CMTime currentTime = self.currentPlayer.currentItem.currentTime;
+    NSTimeInterval currentTimeSec = CMTimeGetSeconds(currentTime);
+    if(isnan(currentTimeSec))
+        return 0;
+    return currentTimeSec;
+}
+
+- (NSString *)currentTimeFormat
+{
+    long currentFmtTime = ceil(self.currentTime);
+    return [self timeFormatWithTime:currentFmtTime];
 }
 
 //缓存进度
@@ -312,24 +295,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     return loadTimeSec / self.totalTime;
 }
 
-//总时间
-- (CGFloat)totalTime
-{
-    CMTime totalTime = self.currentPlayer.currentItem.duration;
-    NSTimeInterval totalTimeSec = CMTimeGetSeconds(totalTime);
-    if(isnan(totalTimeSec))
-        return 0;
-    return totalTimeSec;
-}
-//当前时间
-- (CGFloat)currentTime
-{
-    CMTime currentTime = self.currentPlayer.currentItem.currentTime;
-    NSTimeInterval currentTimeSec = CMTimeGetSeconds(currentTime);
-    if(isnan(currentTimeSec))
-        return 0;
-    return currentTimeSec;
-}
+
 //当前进度
 - (CGFloat)progress
 {
@@ -337,6 +303,38 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
         return 0;
     
     return self.currentTime / self.totalTime;
+}
+//倍速
+- (void)setRate:(float)rate
+{
+    self.currentPlayer.rate = rate;
+}
+- (float)rate
+{
+    return self.currentPlayer.rate;
+}
+//静音
+- (void)setMuted:(BOOL)muted
+{
+    self.currentPlayer.muted = muted;
+}
+- (BOOL)muted
+{
+    return self.currentPlayer.muted;
+}
+//声音
+- (void)setVolume:(float)volume
+{
+    if(volume < 0 || volume > 1) return;
+    
+    if(volume > 0)
+        [self setMuted:NO];
+    
+    self.currentPlayer.volume = volume;
+}
+
+- (float)volume{
+    return self.currentPlayer.volume;
 }
 
 
@@ -352,53 +350,11 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
   
 }
 
-#pragma mark - UI -Handle
-//初始化
-- (void)setupUI
-{
-    [self.showSuperView.layer addSublayer:self.currentPlayerLayer];
-    [self.showSuperView addSubview:self.bottomControllView];
-    self.bottomControllView.frame = CGRectMake(0, CGRectGetMaxY(self.currentPlayerLayer.frame), self.showSuperView.bounds.size.width, self.showSuperView.bounds.size.height - CGRectGetMaxY(self.currentPlayerLayer.frame));
-}
-
-//更新当前时间
-- (void)updateCurrentTimeLabel:(CGFloat)currentTime
-{
-    long videoCurrentTime = ceil(currentTime);
-    
-    NSString *currentStr = nil;
-    if (videoCurrentTime < 3600) {
-        currentStr =  [NSString stringWithFormat:@"%02li:%02li",lround(floor(videoCurrentTime/60.f)),lround(floor(videoCurrentTime/1.f))%60];
-    } else {
-        currentStr =  [NSString stringWithFormat:@"%02li:%02li:%02li",lround(floor(videoCurrentTime/3600.f)),lround(floor(videoCurrentTime%3600)/60.f),lround(floor(videoCurrentTime/1.f))%60];
-    }
-    self.bottomControllView.currentTimeLabel.text = currentStr;
-  
-}
-
-//更新总共时间
-- (void)updateTotalTimeLabel:(CGFloat)totalTime
-{
-    long videoTotalTime = ceil(totalTime);
-    
-    NSString *totalStr = nil;
-    if (videoTotalTime < 3600) {
-        totalStr =  [NSString stringWithFormat:@"%02li:%02li",lround(floor(videoTotalTime/60.f)),lround(floor(videoTotalTime/1.f))%60];
-    } else {
-        totalStr =  [NSString stringWithFormat:@"%02li:%02li:%02li",lround(floor(videoTotalTime/3600.f)),lround(floor(videoTotalTime%3600)/60.f),lround(floor(videoTotalTime/1.f))%60];
-    }
-    self.bottomControllView.totalTimeLabel.text = totalStr;
-}
-
-//更新滑块的进度
-- (void)updateSlideValue:(CGFloat)value
-{
-  
-}
 
 
 
 #pragma mark - pravite
+
 - (BOOL)checkIsCorrectWithURL:(NSURL *)url
 {
     if([url isKindOfClass:[NSURL class]])
@@ -417,7 +373,19 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     return YES;
 }
 
-- (void)playerLocationWithDownLoadVideo:(NSURL *)videoURL  showInView:(UIView *)showView
+- (NSString *)timeFormatWithTime:(long)time
+{
+    
+    NSString *timeFmtStr = nil;
+    if (time < 3600) {
+        timeFmtStr =  [NSString stringWithFormat:@"%02li:%02li",lround(floor(time/60.f)),lround(floor(time/1.f))%60];
+    } else {
+        timeFmtStr =  [NSString stringWithFormat:@"%02li:%02li:%02li",lround(floor(time/3600.f)),lround(floor(time%3600)/60.f),lround(floor(time/1.f))%60];
+    }
+    return timeFmtStr;
+}
+
+- (void)playerLocationWithDownLoadVideo:(NSURL *)videoURL
 {
     self.videoURLAsset  = [AVURLAsset URLAssetWithURL:videoURL options:nil];
     self.currentPlayerItem  = [AVPlayerItem playerItemWithAsset:self.videoURLAsset];
@@ -427,8 +395,6 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
         [self.currentPlayer replaceCurrentItemWithPlayerItem:self.currentPlayerItem];
     }
     self.currentPlayerLayer   = [AVPlayerLayer playerLayerWithPlayer:self.currentPlayer];
-    CGFloat currentPlayerLayerHeight = showView.bounds.size.height - [LZBPlayerBottomControlView getPlayerBottomHeight];
-    self.currentPlayerLayer.frame = CGRectMake(0, 0, showView.bounds.size.width, currentPlayerLayerHeight);
 }
 
 - (void)addObserversOnce
@@ -459,14 +425,6 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     [_currentPlayerItem addObserver:self forKeyPath:LZBVideoPlayerPropertyPlaybackLikelyToKeepUp options:NSKeyValueObservingOptionNew context:nil];
 }
 
-- (void)setCurrentPlayerLayer:(AVPlayerLayer *)currentPlayerLayer
-{
-  if(_currentPlayerLayer != nil)
-  {
-      [_currentPlayerLayer removeFromSuperlayer];
-  }
-    _currentPlayerLayer = currentPlayerLayer;
-}
 
 //复位原来的参数
 - (void)resetParam
@@ -483,42 +441,67 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     self.currentPlayerItem = nil;
     self.currentPlayer = nil;
     self.playPathURL = nil;
-    [self.resourceLoader invalidDownload];
+    [self.resourceLoader invalidDownloader];
     self.resourceLoader = nil;
 }
 
 
-//检测剩余的空间
-- (void)checkDiskSize{
-    __weak typeof(self) weakSelf = self;
-    [LZBCacheManger getAllVideoSize:^(unsigned long long total) {
-         if(total > weakSelf.maxCacheSize)
-             [weakSelf clearAllVideoCache];
-    }];
+
+#pragma mark - init
+- (instancetype)init
+{
+    if(self = [super init])
+    {
+        self.stopWhenAppDidEnterBackground = YES;
+        self.maxCacheSize = 1024*1024*1024;
+        [self addObserversOnce];
+    }
+    return self;
 }
 
++ (instancetype)shareInstance
+{
+    if(_instance == nil)
+    {
+        _instance = [[self alloc]init];
+    }
+    return _instance;
+}
+
++(instancetype)allocWithZone:(struct _NSZone *)zone
+{
+    if(_instance == nil)
+    {
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            _instance = [super allocWithZone:zone];
+        });
+    }
+    return _instance;
+}
+
+- (id)copyWithZone:(NSZone *)zone{
+    return _instance;
+}
+- (id)mutableCopyWithZone:(NSZone *)zone{
+    return _instance;
+}
+
+#pragma mark- lazy
+- (LZBVideoURLResourceLoader *)resourceLoader
+{
+  if(_resourceLoader == nil)
+  {
+     _resourceLoader = [[LZBVideoURLResourceLoader alloc]init];
+      _resourceLoader.delegate = self;
+  }
+    return _resourceLoader;
+}
 - (void)dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [self resetParam];
-    [self stopTimer];
-}
-
-
-#pragma mark- lazy
-- (LZBPlayerBottomControlView *)bottomControllView
-{
-  if(_bottomControllView == nil)
-  {
-      _bottomControllView = [LZBPlayerBottomControlView new];
-  }
-    return _bottomControllView;
-}
-
-- (UIImage *)imageNamed:(NSString *)imageName
-{
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"PlayerImage" ofType:@"bundle"];
-    return [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.png", imageName]]];
+    
 }
 
 @end

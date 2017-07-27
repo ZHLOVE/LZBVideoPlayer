@@ -41,13 +41,14 @@
 /**
   修改传入的URL，输出系统不能识别的URL，使系统执行我们自定义的请求方法
 
- @param url soure URL
+ @param inputURL soure URL
  @return fix URL
  */
-- (NSURL *)getSchemeVideoURL:(NSURL *)url;
+- (NSURL *)getVideoResourceLoaderSchemeWithURL:(NSURL *)inputURL;
+
 
 /**
- * 取消当前下载工具的下载操作, 并且释放下载工具, 避免多个下载请求同时并存
+ 取消资源下载并清除缓存
  */
--(void)invalidDownload;
+- (void)invalidDownloader;
 @end

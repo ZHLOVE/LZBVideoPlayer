@@ -17,7 +17,7 @@
 
 @protocol LZBVideoDownLoadMangerDelegate <NSObject>
 
-
+@optional
 /**
   开始下载数据，传出长度和类型
  @param manger 下载对象
@@ -61,34 +61,23 @@
   代理监听下载状态
  */
 @property (nonatomic, weak) id <LZBVideoDownLoadMangerDelegate> downloadDelegate;
-/*
- * 视频路径的 scheme，设置scheme
- */
-@property (nonatomic, strong) NSString *scheme;
 /**
- * 查询是否已经下载完成
+ * 记录区间的起始位置
  */
-@property (nonatomic, assign, readonly) BOOL isFinishLoad;
+@property (nonatomic, assign, readonly) long long startOffset;
 /**
- * 要下载的文件的URL
+ 已经下载文件的大小
  */
-@property (nonatomic, strong, readonly) NSURL *url;
+@property (nonatomic, assign, readonly)  long long  downLoadSize;
 /**
- * 文件总长度
- */
-@property (nonatomic, assign, readonly) NSUInteger fileLength;
-/**
- * 开始下载位置的偏移量
- */
-@property (nonatomic, assign, readonly) NSUInteger offset;
-/**
- * 已经下载文件的位置
- */
-@property (nonatomic, assign, readonly) NSUInteger downLoadedOffset;
-/**
- *  下载文件的 mineType 类型
+ *  需要下载文件的 mineType 类型
  */
 @property (nonatomic, strong, readonly) NSString *mimeType;
+
+/**
+ 需要下载文件的总大小
+ */
+@property (nonatomic, assign, readonly) long long totalSize;
 
 
 #pragma mark- API
@@ -98,17 +87,16 @@
  * @param url 要下载的文件的URL
  * @param offset 下载初始偏移量
  */
-- (void)setUrl:(NSURL *)url offset:(long long)offset;
+- (void)downLoaderWithURL:(NSURL *)url offset:(long long)offset;
 
 /**
  * 取消当前下载进程
  */
 - (void)invalidateAndCancel;
-
 /**
- * 移除数据
+ * 取消并且移除临时数据
  */
-- (void)clearData;
+- (void)invalidateAndClean;
 
 
 @end

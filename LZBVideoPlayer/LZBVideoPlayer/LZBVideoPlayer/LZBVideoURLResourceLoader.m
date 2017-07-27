@@ -7,8 +7,7 @@
 //
 
 #import "LZBVideoURLResourceLoader.h"
-#import "LZBVideoCachePathTool.h"
-#import <MobileCoreServices/MobileCoreServices.h>
+#import "LZBVideoFileManger.h"
 
 @interface LZBVideoURLResourceLoader()<LZBVideoDownLoadMangerDelegate>
 /**
@@ -19,51 +18,16 @@
 /**
  请求队列数据
  */
-@property (nonatomic, strong) NSMutableArray *appendingRequests;
+@property (nonatomic, strong) NSMutableArray *downLoadedDataRequests;
 
 /**
-  soure URL 的 scheme
+  soure URL
  */
-@property(nonatomic, strong) NSString *scheme;
-
-/**
- * 视频路径
- */
-@property (nonatomic, strong) NSString *videoPath;
+@property(nonatomic, strong)  NSURL *inputURL;
 
 @end
 
 @implementation LZBVideoURLResourceLoader
-
-#pragma mark- API
-
-- (NSURL *)getSchemeVideoURL:(NSURL *)url
-{
-    
-    // NSURLComponents用来替代NSMutableURL，可以readwrite修改URL
-    // AVAssetResourceLoader通过你提供的委托对象去调节AVURLAsset所需要的加载资源。
-    // 而很重要的一点是，AVAssetResourceLoader仅在AVURLAsset不知道如何去加载这个URL资源时才会被调用
-    // 就是说你提供的委托对象在AVURLAsset不知道如何加载资源时才会得到调用。
-    // 所以我们又要通过一些方法来曲线解决这个问题，把我们目标视频URL地址的scheme替换为系统不能识别的scheme
-    NSURLComponents *component = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:NO];
-    self.scheme = component.scheme;
-    component.scheme = @"lzbsystemNotKnow";
-    
-    //获取临时文件的视频路径
-    NSString *tempFile = [LZBVideoCachePathTool getFilePathWithTempCache];
-    NSString *videoName =[LZBVideoCachePathTool getFileNameWithURL:url];
-    NSString *tempFilePath = [tempFile stringByAppendingPathComponent:videoName];
-    self.videoPath = tempFilePath;
-    
-    return [component URL];
-    
-}
-
--(void)invalidDownload
-{
-    [self.downLoadManger invalidateAndCancel];
-    self.downLoadManger = nil;
-}
 
 #pragma mark - AVAssetResourceLoaderDelegate
 
@@ -75,43 +39,64 @@
  */
 - (BOOL)resourceLoader:(AVAssetResourceLoader *)resourceLoader shouldWaitForLoadingOfRequestedResource:(AVAssetResourceLoadingRequest *)loadingRequest
 {
-    if(resourceLoader && loadingRequest)
+    
+    //1.判断请求资源是否已经下载，如果已经下载，就直接把数据响应给外界并 retern
+    if([LZBVideoFileManger cacheFileExitWithURL:self.inputURL])
     {
-        [self.appendingRequests addObject:loadingRequest];
-        //处理请求
-        [self handleLoadingRequest:loadingRequest];
-        
+        [self hanleLocationDidLoadedDataRequest:loadingRequest];
+        return YES;
     }
+    
+    //获取请求起始位置
+    long long requireStartOffset = loadingRequest.dataRequest.requestedOffset;
+    long long currentOffset = loadingRequest.dataRequest.currentOffset;
+    if(requireStartOffset != currentOffset)
+        requireStartOffset = currentOffset;
+    
+    [self.downLoadedDataRequests addObject:loadingRequest];
+    
+    //2.判断是否已经有部分数据，如果没有，就重头开始下载并return
+    if(self.downLoadManger.downLoadSize == 0)
+    {
+        [self.downLoadManger downLoaderWithURL:self.inputURL offset:requireStartOffset];
+        return YES;
+    }
+    
+    //3.判断请求的区间数据是否在已经下载的区间，如果不在，就重新下载
+    //3.1 请求开始点 < 已经下载资源的开始点
+    //3.2 请求开始点 > 已经下载资源的开始点 + 长度 + 多一段长度（自定义100)
+    if(requireStartOffset < self.downLoadManger.startOffset || requireStartOffset > self.downLoadManger.startOffset + self.downLoadManger.downLoadSize + 100)
+    {
+        [self.downLoadManger invalidateAndClean];
+        [self.downLoadManger downLoaderWithURL:self.inputURL offset:requireStartOffset];
+        return YES;
+    }
+    
+    
+    //4.响应部分数据给外界，并继续处理请求
+    [self hanleAllLoadingRequests];
     return YES;
 }
 - (void)resourceLoader:(AVAssetResourceLoader *)resourceLoader didCancelLoadingRequest:(AVAssetResourceLoadingRequest *)loadingRequest
 {
-    [self.appendingRequests removeObject:loadingRequest];
+    [self.downLoadedDataRequests removeObject:loadingRequest];
 }
 
 
 #pragma mark -  LZBVideoDownLoadMangerDelegate
-//开始下载
-- (void)manger:(LZBVideoDownLoadManger *)manger startDidReceiveVideoLength:(NSUInteger)videoLength mimeType:(NSString *)mimeType
-{
-  
-}
-
 //正在下载中
 - (void)manager:(LZBVideoDownLoadManger *)manager downingDidReceiveData:(NSData *)data downloadOffset:(NSInteger)offset tempFilePath:(NSString *)tempFilePath
 {
-    [self handlePendingRequests];
+    [self hanleAllLoadingRequests];
 }
 //下载成功
 - (void)manager:(LZBVideoDownLoadManger *)manager didSuccessLoadingWithFileSavePath:(NSString *)saveFilePath
 {
-    self.videoPath = saveFilePath;
     if([self.delegate respondsToSelector:@selector(didFinishSucessLoadedWithManger:saveVideoPath:)])
     {
-        [self.delegate didFinishSucessLoadedWithManger:manager saveVideoPath:self.videoPath];
+        [self.delegate didFinishSucessLoadedWithManger:manager saveVideoPath:saveFilePath];
     }
 }
-
 //下载失败
 - (void)manager:(LZBVideoDownLoadManger *)manager didFailLoadingWithError:(NSError *)error
 {
@@ -123,40 +108,11 @@
 
 #pragma mark - pravite
 //处理加载请求
-- (void)handleLoadingRequest:(AVAssetResourceLoadingRequest *)loadingRequest
+- (void)hanleAllLoadingRequests
 {
-    NSURL *interuputURL = loadingRequest.request.URL;
-    NSRange range = NSMakeRange((NSUInteger)loadingRequest.dataRequest.currentOffset, NSUIntegerMax);
-    if(self.downLoadManger == nil)
-    {
-        self.downLoadManger = [[LZBVideoDownLoadManger alloc]init];
-        self.downLoadManger.downloadDelegate = self;
-        self.downLoadManger.scheme = self.scheme;
-        
-        //从头开始加载
-        [self.downLoadManger setUrl:interuputURL offset:0];
-    }
-    else
-    {
-       if(self.downLoadManger.downLoadedOffset > 0)
-       {
-           [self handlePendingRequests];
-       }
-        // 如果新的rang的起始位置比当前缓存的位置还大300k，则重新按照range请求数据
-        if (self.downLoadManger.offset + self.downLoadManger.downLoadedOffset + 1024 * 300 < range.location ||
-            // 如果往回拖也重新请求
-            range.location < self.downLoadManger.offset) {
-            [self.downLoadManger setUrl:interuputURL offset:range.location];
-        }
-    }
-    
-}
-
-- (void)handlePendingRequests
-{
-   NSMutableArray *requestsCompleted = [NSMutableArray array];  //请求完成的数组
-     //每次下载一块数据都是一次请求，把这些请求放到数组，遍历数组,
-    for (AVAssetResourceLoadingRequest *request in self.appendingRequests)
+    NSMutableArray *deleteRequests = [NSMutableArray array];  //请求完成的数组
+    //每次下载一块数据都是一次请求，把这些请求放到数组，遍历数组,
+    for (AVAssetResourceLoadingRequest *request in self.downLoadedDataRequests)
     {
         //1.遍历所有的请求, 为每个请求加上请求的数据长度和文件类型等信息
         [self processRequestFillInfomation:request.contentInformationRequest];
@@ -166,54 +122,115 @@
         //如果是完整的数据，那么把请求增加到完成数组里面
         if(isDidDataCompletely)
         {
-            [requestsCompleted addObject:request];
+            [deleteRequests addObject:request];
             [request finishLoading];
         }
     }
     
     //移除已经完成的请求
-    [self.appendingRequests removeObjectsInArray:[requestsCompleted copy]];
+    [self.downLoadedDataRequests removeObjectsInArray:[deleteRequests copy]];
+}
+
+
+
+//处理本地已经下载好的数据，响应给外界
+- (void)hanleLocationDidLoadedDataRequest:(AVAssetResourceLoadingRequest *)loadingRequest
+{
+    //1.填充请求信息
+    loadingRequest.contentInformationRequest.contentType = [LZBVideoFileManger contentTypeWithURL:self.inputURL];
+    loadingRequest.contentInformationRequest.contentLength = [LZBVideoFileManger cacheFileSizeWithURL:self.inputURL];
+    loadingRequest.contentInformationRequest.byteRangeAccessSupported = YES;
+    
+    //2.响应数据到外界
+    NSData *data = [NSData dataWithContentsOfFile:[LZBVideoFileManger cacheFilePathWithURL:self.inputURL] options:NSDataReadingMappedIfSafe error:nil];
+    
+    long long responseOffset = loadingRequest.dataRequest.requestedOffset;
+    long long responseLength = loadingRequest.dataRequest.requestedLength;
+    
+    NSData *subData = [data subdataWithRange:NSMakeRange(responseOffset, responseLength)];
+    [loadingRequest.dataRequest respondWithData:subData];
+    
+    //3.结束响应
+    [loadingRequest finishLoading];
+    
 }
 
 //为每个请求增加请求信息
 - (void)processRequestFillInfomation:(AVAssetResourceLoadingContentInformationRequest *)contentInformationRequest
 {
     NSString *minetype = self.downLoadManger.mimeType;
-    CFStringRef contentType = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, (__bridge CFStringRef _Nonnull)(minetype), NULL);
     contentInformationRequest.byteRangeAccessSupported = YES;
-    contentInformationRequest.contentType = CFBridgingRelease(contentType);
-    contentInformationRequest.contentLength = self.downLoadManger.fileLength;
+    contentInformationRequest.contentType = minetype;
+    contentInformationRequest.contentLength = self.downLoadManger.totalSize;
 }
 
 //判断请求是否加载完成
 - (BOOL)isCompeletionWithDataForRequest:(AVAssetResourceLoadingDataRequest *)dataRequest
 {
-    long long startOffset = dataRequest.requestedOffset;
-    if(dataRequest.currentOffset != 0)
-        startOffset = dataRequest.currentOffset;
-    if((self.downLoadManger.offset + self.downLoadManger.downLoadedOffset) < startOffset)
-        return NO;
-    if(startOffset < self.downLoadManger.offset)
-        return NO;
+    long long requestedOffset = dataRequest.requestedOffset;
+    long long currentOffset = dataRequest.currentOffset;
+    long long requestedLength = dataRequest.requestedLength;
+    if(requestedOffset != currentOffset)
+        requestedOffset = currentOffset;
     
-    NSData *fileData = [NSData dataWithContentsOfFile:self.videoPath options:NSDataReadingMappedIfSafe error:nil];
-    NSInteger unreadBytes = self.downLoadManger.downLoadedOffset - self.downLoadManger.offset - (NSInteger)startOffset;
-    NSUInteger numberOfBytesToRespond = MIN((NSUInteger)dataRequest.requestedLength, unreadBytes);
-    [dataRequest respondWithData:[fileData subdataWithRange:NSMakeRange((NSUInteger)startOffset- self.downLoadManger.offset, (NSUInteger)numberOfBytesToRespond)]];
+    NSData *data = [NSData dataWithContentsOfFile:[LZBVideoFileManger tempFilePathWithURL:self.inputURL] options:NSDataReadingMappedIfSafe error:nil];
+    if(data == nil)
+    {
+        data = [NSData dataWithContentsOfFile:[LZBVideoFileManger cacheFilePathWithURL:self.inputURL] options:NSDataReadingMappedIfSafe error:nil];
+    }
     
-    //需求的长度
-    long long endOffset = dataRequest.requestedOffset + dataRequest.requestedLength;
-    BOOL didRespondFully = (self.downLoadManger.offset + self.downLoadManger.downLoadedOffset) >= endOffset;
+    long long responseOffset = requestedOffset - self.downLoadManger.startOffset;
+    long long responseLength = MIN(self.downLoadManger.startOffset + self.downLoadManger.downLoadSize - requestedOffset, requestedLength);
     
-    return didRespondFully;
+    NSData *subData = [data subdataWithRange:NSMakeRange(responseOffset, responseLength)];
+    [dataRequest respondWithData:subData];
+    return requestedLength == responseLength;
 }
 
-- (NSMutableArray *)appendingRequests
+
+
+#pragma mark- API
+
+- (NSURL *)getVideoResourceLoaderSchemeWithURL:(NSURL *)inputURL;
 {
-  if(_appendingRequests == nil)
+    
+    // NSURLComponents用来替代NSMutableURL，可以readwrite修改URL
+    // AVAssetResourceLoader通过你提供的委托对象去调节AVURLAsset所需要的加载资源。
+    // 而很重要的一点是，AVAssetResourceLoader仅在AVURLAsset不知道如何去加载这个URL资源时才会被调用
+    // 就是说你提供的委托对象在AVURLAsset不知道如何加载资源时才会得到调用。
+    // 所以我们又要通过一些方法来曲线解决这个问题，把我们目标视频URL地址的scheme替换为系统不能识别的scheme
+    if(inputURL.absoluteString.length == 0) return nil;
+    NSURLComponents *component = [NSURLComponents componentsWithURL:inputURL resolvingAgainstBaseURL:NO];
+    self.inputURL = inputURL;
+    component.scheme = @"lzbsystemNotKnow";
+    return [component URL];
+}
+
+- (void)invalidDownloader
+{
+    [self.downLoadManger invalidateAndCancel];
+    self.downLoadManger = nil;
+}
+
+
+#pragma mark- lazy
+
+- (NSMutableArray *)downLoadedDataRequests
+{
+  if(_downLoadedDataRequests == nil)
   {
-      _appendingRequests = [NSMutableArray array];
+      _downLoadedDataRequests = [NSMutableArray array];
   }
-    return _appendingRequests;
+    return _downLoadedDataRequests;
+}
+
+- (LZBVideoDownLoadManger *)downLoadManger
+{
+  if(_downLoadManger == nil)
+  {
+      _downLoadManger = [[LZBVideoDownLoadManger alloc]init];
+      _downLoadManger.downloadDelegate = self;
+  }
+    return _downLoadManger;
 }
 @end

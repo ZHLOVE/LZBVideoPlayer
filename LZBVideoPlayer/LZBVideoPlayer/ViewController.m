@@ -15,6 +15,8 @@
 
 @property (nonatomic, strong) LZBVideoPlayerView *playerView;
 
+@property (nonatomic, strong) NSMutableArray <NSURL *>*playAddresses;
+
 @end
 
 @implementation ViewController
@@ -23,7 +25,8 @@
     [super viewDidLoad];
     [self.view addSubview:self.playerView];
     self.playerView.frame = CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.width);
-    [self.playerView playWithURL:[NSURL URLWithString:@"http://120.25.226.186:32812/resources/videos/minion_01.mp4"] isSupportCache:YES];
+    [self.playerView playWithURL:self.playAddresses.firstObject isSupportCache:YES];
+    self.playerView.playAddresses = self.playAddresses;
 }
 
 - (UIView *)showView
@@ -46,4 +49,17 @@
     return _playerView;
 }
 
+
+- (NSMutableArray *)playAddresses
+{
+   if(_playAddresses == nil)
+   {
+       _playAddresses = [NSMutableArray array];
+       for (NSInteger i = 1; i< 10; i++) {
+           [_playAddresses addObject:[NSURL URLWithString:[NSString stringWithFormat:@"http://120.25.226.186:32812/resources/videos/minion_0%ld.mp4",(long)i]]];
+       }
+       
+   }
+    return _playAddresses;
+}
 @end

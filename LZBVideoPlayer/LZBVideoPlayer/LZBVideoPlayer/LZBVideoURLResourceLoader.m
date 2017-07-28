@@ -40,6 +40,7 @@
 - (BOOL)resourceLoader:(AVAssetResourceLoader *)resourceLoader shouldWaitForLoadingOfRequestedResource:(AVAssetResourceLoadingRequest *)loadingRequest
 {
     
+    NSLog(@"开始资源请求");
     //1.判断请求资源是否已经下载，如果已经下载，就直接把数据响应给外界并 retern
     if([LZBVideoFileManger cacheFileExitWithURL:self.inputURL])
     {

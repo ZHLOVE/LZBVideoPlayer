@@ -19,6 +19,9 @@
 
 @property (nonatomic, assign) BOOL isAlreadyAdd;  //是不是早就已经增加播放层
 
+@property (nonatomic, strong) NSURL *currentURL;
+
+
 @end
 
 @implementation LZBVideoPlayerView
@@ -57,9 +60,10 @@
 
 - (void)playWithURL:(NSURL *)url  isSupportCache:(BOOL)isSupportCache
 {
+    self.currentURL = url;
     [[LZBVideoPlayer shareInstance] playWithURL:url isSupportCache:isSupportCache];
-    [self addLoadAnimation];
     [LZBVideoPlayer shareInstance].delegate = self;
+    [self addLoadAnimation];
 }
 
 
@@ -133,11 +137,61 @@
 
 
 #pragma mark - 事件处理
+- (void)sliderValueChange:(UISlider *)slider
+{
+    [[LZBVideoPlayer shareInstance] seekWithProgress:slider.value];
+}
 
+- (void)lastButtonClick:(UIButton *)lastButton
+{
+    NSInteger index = [self.playAddresses indexOfObject:self.currentURL];
+    if(index == 0)
+    {
+        NSLog(@"已经是第一个视频");
+        return;
+    }
+    index--;
+    NSURL *url = self.playAddresses[index];
+    [[LZBVideoPlayer shareInstance] playWithURL:url isSupportCache:YES];
+    self.currentURL = url;
+    
+}
+
+- (void)nextButtonClick:(UIButton *)nextButton{
+    NSInteger index = [self.playAddresses indexOfObject:self.currentURL];
+    if(index == self.playAddresses.count - 1)
+    {
+        NSLog(@"已经是第最后个视频");
+        return;
+    }
+    index++;
+    NSURL *url = self.playAddresses[index];
+    [[LZBVideoPlayer shareInstance] playWithURL:url isSupportCache:YES];
+    self.currentURL = url;
+}
+
+- (void)playPasueButtonClick:(UIButton *)playPauseButton
+{
+    playPauseButton.selected = !playPauseButton.isSelected;
+    if(playPauseButton.selected)
+    {
+        [[LZBVideoPlayer shareInstance] pause];
+        NSLog(@"UI是播放中状态");
+    }
+    
+    else
+    {
+      [[LZBVideoPlayer shareInstance] resume];
+         NSLog(@"UI是暂停状态");
+    }
+    
+    
+    
+}
 
 
 #pragma mark - UI -Handle
-
+//增加显示层到父类
 - (void)addPlayLayerToSuperView
 {
 
@@ -214,6 +268,11 @@
     if(_bottomControllView == nil)
     {
         _bottomControllView = [LZBPlayerBottomControlView new];
+        [_bottomControllView.slider addTarget:self action:@selector(sliderValueChange:) forControlEvents:UIControlEventValueChanged];
+        [_bottomControllView.lastButton addTarget:self action:@selector(lastButtonClick:) forControlEvents:UIControlEventTouchUpInside];
+         [_bottomControllView.nextButton addTarget:self action:@selector(nextButtonClick:) forControlEvents:UIControlEventTouchUpInside];
+         [_bottomControllView.playPasueButton addTarget:self action:@selector(playPasueButtonClick:) forControlEvents:UIControlEventTouchUpInside];
+        
     }
     return _bottomControllView;
 }

@@ -23,7 +23,6 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 @property (nonatomic, strong)  NSURL *playPathURL; //播放视频url
 @property (nonatomic, assign)  BOOL isAddObserver; //是否添加了监听，只增加一次
 
-@property (nonatomic, strong)  AVURLAsset *videoURLAsset;  //当前播放视频网络请求URL资源
 @property (nonatomic, strong) AVPlayerItem *currentPlayerItem; //当前正在播放视频的Item
 @property (nonatomic, strong) AVPlayer *currentPlayer; //当前播放器
 
@@ -47,6 +46,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     
     if(![self checkIsCorrectWithURL:url]) return;
    
+    [self resetParam];
     //2.检测URL本地还是网络,播放URL
     if(![self.playPathURL.absoluteString hasPrefix:@"http"])
     {
@@ -61,10 +61,10 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
             tempVideoURL = [self.resourceLoader getVideoResourceLoaderSchemeWithURL:self.playPathURL];
         else
             tempVideoURL = self.playPathURL;
-        self.videoURLAsset  = [AVURLAsset URLAssetWithURL:tempVideoURL options:nil];
-        [self.videoURLAsset.resourceLoader setDelegate:self.resourceLoader queue:dispatch_get_main_queue()];
+        AVURLAsset *urlAsset  = [AVURLAsset URLAssetWithURL:tempVideoURL options:nil];
+        [urlAsset.resourceLoader setDelegate:self.resourceLoader queue:dispatch_get_main_queue()];
         
-        self.currentPlayerItem  = [AVPlayerItem playerItemWithAsset:self.videoURLAsset];
+        self.currentPlayerItem  = [AVPlayerItem playerItemWithAsset:urlAsset];
         if (!self.currentPlayer) {
             self.currentPlayer = [AVPlayer playerWithPlayerItem:self.currentPlayerItem];
         } else {
@@ -387,8 +387,8 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 
 - (void)playerLocationWithDownLoadVideo:(NSURL *)videoURL
 {
-    self.videoURLAsset  = [AVURLAsset URLAssetWithURL:videoURL options:nil];
-    self.currentPlayerItem  = [AVPlayerItem playerItemWithAsset:self.videoURLAsset];
+    AVURLAsset *urlAsset  = [AVURLAsset URLAssetWithURL:videoURL options:nil];
+    self.currentPlayerItem  = [AVPlayerItem playerItemWithAsset:urlAsset];
     if (!self.currentPlayer) {
         self.currentPlayer = [AVPlayer playerWithPlayerItem:self.currentPlayerItem];
     } else {
@@ -436,11 +436,8 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
         self.currentPlayerLayer = nil;
     }
     
-    [self.videoURLAsset.resourceLoader setDelegate:nil queue:dispatch_get_main_queue()];
-    self.videoURLAsset = nil;
     self.currentPlayerItem = nil;
     self.currentPlayer = nil;
-    self.playPathURL = nil;
     [self.resourceLoader invalidDownloader];
     self.resourceLoader = nil;
 }

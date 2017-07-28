@@ -139,6 +139,7 @@
     //关闭流
     [self.outputStream close];
     self.outputStream = nil;
+
 }
 
 //下载失败

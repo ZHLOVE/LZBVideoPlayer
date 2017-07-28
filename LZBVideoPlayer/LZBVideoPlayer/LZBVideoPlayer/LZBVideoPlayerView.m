@@ -75,19 +75,28 @@
         case LZBVideoPlayerState_ReadyToPlay:
             {
                 [self addPlayLayerToSuperView];
+                NSLog(@"当前状态是-LZBVideoPlayerState_ReadyToPlay");
             }
             break;
         case LZBVideoPlayerState_Playing:
             {
                 [self hiddenLoadAnimation];
+                NSLog(@"当前状态是-LZBVideoPlayerState_Playing");
             }
             break;
         case LZBVideoPlayerState_Stoped:
+            {
+                [self showLoadAnimaion];
+                NSLog(@"当前状态是-LZBVideoPlayerState_Stoped");
+                [self nextButtonClick:nil];
+            }
+            break;
         case LZBVideoPlayerState_Pause:
         case LZBVideoPlayerState_Failed:
         case LZBVideoPlayerState_Loading:
             {
                 [self showLoadAnimaion];
+                NSLog(@"当前状态是-%ld",state);
             }
             break;
         default:

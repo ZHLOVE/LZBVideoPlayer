@@ -125,6 +125,7 @@
         {
             [deleteRequests addObject:request];
             [request finishLoading];
+            NSLog(@"---下载好的资源给外界");
         }
     }
     
@@ -133,6 +134,62 @@
 }
 
 
+
+
+
+//为每个请求增加请求信息
+- (void)processRequestFillInfomation:(AVAssetResourceLoadingContentInformationRequest *)contentInformationRequest
+{
+    NSString *minetype = self.downLoadManger.mimeType;
+    contentInformationRequest.byteRangeAccessSupported = YES;
+    contentInformationRequest.contentType = minetype;
+    contentInformationRequest.contentLength = self.downLoadManger.totalSize;
+}
+
+//判断请求是否加载完成
+- (BOOL)isCompeletionWithDataForRequest:(AVAssetResourceLoadingDataRequest *)dataRequest
+{
+    long long requestedOffset = dataRequest.requestedOffset;
+    long long currentOffset = dataRequest.currentOffset;
+    long long requestedLength = dataRequest.requestedLength;
+    if(requestedOffset != currentOffset)
+        requestedOffset = currentOffset;
+//    
+    NSData *data = [NSData dataWithContentsOfFile:[LZBVideoFileManger tempFilePathWithURL:self.inputURL] options:NSDataReadingMappedIfSafe error:nil];
+    if(data == nil)
+    {
+        data = [NSData dataWithContentsOfFile:[LZBVideoFileManger cacheFilePathWithURL:self.inputURL] options:NSDataReadingMappedIfSafe error:nil];
+    }
+//
+//    long long responseOffset = requestedOffset - self.downLoadManger.startOffset;
+//    long long responseLength = MIN(self.downLoadManger.startOffset + self.downLoadManger.downLoadSize - requestedOffset, requestedLength);
+//    //容错
+//    if(responseLength > NSUIntegerMax)
+//        responseLength = NSUIntegerMax;
+//    
+//    NSData *subData = [data subdataWithRange:NSMakeRange(responseOffset, responseLength)];
+//    [dataRequest respondWithData:subData];
+//    BOOL compeletion = requestedLength == responseLength;
+//    return compeletion;
+    
+    // This is the total data we have from startOffset to whatever has been downloaded so far
+    NSUInteger unreadBytes = self.downLoadManger.downLoadSize - ((NSInteger)requestedOffset - self.downLoadManger.startOffset);
+    
+    // Respond with whatever is available if we can't satisfy the request fully yet
+    NSUInteger numberOfBytesToRespondWith = MIN((NSUInteger)dataRequest.requestedLength, unreadBytes);
+    
+    
+    [dataRequest respondWithData:[data subdataWithRange:NSMakeRange((NSUInteger)requestedOffset- self.downLoadManger.startOffset, (NSUInteger)numberOfBytesToRespondWith)]];
+    
+    
+    
+    long long endOffset = requestedOffset + dataRequest.requestedLength;
+    BOOL didRespondFully = (self.downLoadManger.startOffset + self.downLoadManger.downLoadSize) >= endOffset;
+    
+    return didRespondFully;
+    
+
+}
 
 //处理本地已经下载好的数据，响应给外界
 - (void)hanleLocationDidLoadedDataRequest:(AVAssetResourceLoadingRequest *)loadingRequest
@@ -154,38 +211,6 @@
     //3.结束响应
     [loadingRequest finishLoading];
     
-}
-
-//为每个请求增加请求信息
-- (void)processRequestFillInfomation:(AVAssetResourceLoadingContentInformationRequest *)contentInformationRequest
-{
-    NSString *minetype = self.downLoadManger.mimeType;
-    contentInformationRequest.byteRangeAccessSupported = YES;
-    contentInformationRequest.contentType = minetype;
-    contentInformationRequest.contentLength = self.downLoadManger.totalSize;
-}
-
-//判断请求是否加载完成
-- (BOOL)isCompeletionWithDataForRequest:(AVAssetResourceLoadingDataRequest *)dataRequest
-{
-    long long requestedOffset = dataRequest.requestedOffset;
-    long long currentOffset = dataRequest.currentOffset;
-    long long requestedLength = dataRequest.requestedLength;
-    if(requestedOffset != currentOffset)
-        requestedOffset = currentOffset;
-    
-    NSData *data = [NSData dataWithContentsOfFile:[LZBVideoFileManger tempFilePathWithURL:self.inputURL] options:NSDataReadingMappedIfSafe error:nil];
-    if(data == nil)
-    {
-        data = [NSData dataWithContentsOfFile:[LZBVideoFileManger cacheFilePathWithURL:self.inputURL] options:NSDataReadingMappedIfSafe error:nil];
-    }
-    
-    long long responseOffset = requestedOffset - self.downLoadManger.startOffset;
-    long long responseLength = MIN(self.downLoadManger.startOffset + self.downLoadManger.downLoadSize - requestedOffset, requestedLength);
-    
-    NSData *subData = [data subdataWithRange:NSMakeRange(responseOffset, responseLength)];
-    [dataRequest respondWithData:subData];
-    return requestedLength == responseLength;
 }
 
 

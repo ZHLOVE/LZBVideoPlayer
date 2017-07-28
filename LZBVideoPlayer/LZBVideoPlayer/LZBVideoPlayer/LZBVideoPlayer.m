@@ -18,12 +18,12 @@ NSString *const LZBVideoPlayerPropertyStatus = @"status";
 NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyToKeepUp";
 
 
-@interface LZBVideoPlayer() <LZBVideoURLResourceLoaderDelegate>
+@interface LZBVideoPlayer()
 
 @property (nonatomic, strong)  NSURL *playPathURL; //播放视频url
 @property (nonatomic, assign)  BOOL isAddObserver; //是否添加了监听，只增加一次
 
-@property (nonatomic, strong) AVPlayerItem *currentPlayerItem; //当前正在播放视频的Item
+@property (nonatomic, strong) AVPlayerItem *currentItem; //当前正在播放视频的Item
 @property (nonatomic, strong) AVPlayer *currentPlayer; //当前播放器
 
 @property (nonatomic, strong) LZBVideoURLResourceLoader *resourceLoader;  // 数据源
@@ -64,11 +64,11 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
         AVURLAsset *urlAsset  = [AVURLAsset URLAssetWithURL:tempVideoURL options:nil];
         [urlAsset.resourceLoader setDelegate:self.resourceLoader queue:dispatch_get_main_queue()];
         
-        self.currentPlayerItem  = [AVPlayerItem playerItemWithAsset:urlAsset];
+        self.currentItem  = [AVPlayerItem playerItemWithAsset:urlAsset];
         if (!self.currentPlayer) {
-            self.currentPlayer = [AVPlayer playerWithPlayerItem:self.currentPlayerItem];
+            self.currentPlayer = [AVPlayer playerWithPlayerItem:self.currentItem];
         } else {
-            [self.currentPlayer replaceCurrentItemWithPlayerItem:self.currentPlayerItem];
+            [self.currentPlayer replaceCurrentItemWithPlayerItem:self.currentItem];
         }
         self.currentPlayerLayer   = [AVPlayerLayer playerLayerWithPlayer:self.currentPlayer];
     }
@@ -76,7 +76,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 
 - (void)resume
 {
-    if(self.currentPlayerItem == nil) return;
+    if(self.currentPlayer == nil) return;
     [self.currentPlayer play];
     self.isPauseByUser = NO;
     if(self.currentPlayer.currentItem && self.currentPlayer.currentItem.playbackLikelyToKeepUp)
@@ -87,7 +87,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 
 - (void)pause
 {
-    if(self.currentPlayerItem == nil) return;
+    if(self.currentPlayer == nil) return;
     [self.currentPlayer pause];
     self.isPauseByUser = YES;
     if(self.currentPlayer.currentItem)
@@ -101,7 +101,6 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     [self.currentPlayer cancelPendingPrerolls];
     if(self.currentPlayer.currentItem)
         self.state = LZBVideoPlayerState_Stoped;
-    self.currentPlayer = nil;
 }
 
 - (void)seekWithTimeDiffer:(NSTimeInterval)differ
@@ -337,22 +336,6 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     return self.currentPlayer.volume;
 }
 
-
-#pragma mark - LZBVideoURLResourceLoaderDelegate
-
-- (void)didFinishSucessLoadedWithManger:(LZBVideoDownLoadManger *)manger saveVideoPath:(NSString *)videoPath
-{
-     //检测磁盘是否够用
-}
-
-- (void)didFailLoadedWithManger:(LZBVideoDownLoadManger *)manger withError:(NSError *)error
-{
-  
-}
-
-
-
-
 #pragma mark - pravite
 
 - (BOOL)checkIsCorrectWithURL:(NSURL *)url
@@ -388,11 +371,11 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 - (void)playerLocationWithDownLoadVideo:(NSURL *)videoURL
 {
     AVURLAsset *urlAsset  = [AVURLAsset URLAssetWithURL:videoURL options:nil];
-    self.currentPlayerItem  = [AVPlayerItem playerItemWithAsset:urlAsset];
+    self.currentItem  = [AVPlayerItem playerItemWithAsset:urlAsset];
     if (!self.currentPlayer) {
-        self.currentPlayer = [AVPlayer playerWithPlayerItem:self.currentPlayerItem];
+        self.currentPlayer = [AVPlayer playerWithPlayerItem:self.currentItem];
     } else {
-        [self.currentPlayer replaceCurrentItemWithPlayerItem:self.currentPlayerItem];
+        [self.currentPlayer replaceCurrentItemWithPlayerItem:self.currentItem];
     }
     self.currentPlayerLayer   = [AVPlayerLayer playerLayerWithPlayer:self.currentPlayer];
 }
@@ -410,19 +393,19 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 }
 
 
-- (void)setCurrentPlayerItem:(AVPlayerItem *)currentPlayerItem
+- (void)setCurrentItem:(AVPlayerItem *)currentItem
 {
-    if(_currentPlayerItem != nil) //移除之前的监听
+    if(_currentItem != nil) //移除之前的监听
     {
-        [_currentPlayerItem removeObserver:self forKeyPath:LZBVideoPlayerPropertyStatus];
-        [_currentPlayerItem removeObserver:self forKeyPath:LZBVideoPlayerPropertyPlaybackLikelyToKeepUp];
+        [_currentItem removeObserver:self forKeyPath:LZBVideoPlayerPropertyStatus];
+        [_currentItem removeObserver:self forKeyPath:LZBVideoPlayerPropertyPlaybackLikelyToKeepUp];
         
     }
     
-    _currentPlayerItem = currentPlayerItem;
+    _currentItem = currentItem;
     //增加现在的监听
-    [_currentPlayerItem addObserver:self forKeyPath:LZBVideoPlayerPropertyStatus options:NSKeyValueObservingOptionNew context:nil];
-    [_currentPlayerItem addObserver:self forKeyPath:LZBVideoPlayerPropertyPlaybackLikelyToKeepUp options:NSKeyValueObservingOptionNew context:nil];
+    [_currentItem addObserver:self forKeyPath:LZBVideoPlayerPropertyStatus options:NSKeyValueObservingOptionNew context:nil];
+    [_currentItem addObserver:self forKeyPath:LZBVideoPlayerPropertyPlaybackLikelyToKeepUp options:NSKeyValueObservingOptionNew context:nil];
 }
 
 
@@ -436,7 +419,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
         self.currentPlayerLayer = nil;
     }
     
-    self.currentPlayerItem = nil;
+    self.currentItem = nil;
     self.currentPlayer = nil;
     [self.resourceLoader invalidDownloader];
     self.resourceLoader = nil;
@@ -490,7 +473,6 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
   if(_resourceLoader == nil)
   {
      _resourceLoader = [[LZBVideoURLResourceLoader alloc]init];
-      _resourceLoader.delegate = self;
   }
     return _resourceLoader;
 }

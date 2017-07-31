@@ -72,8 +72,6 @@
         [self.downLoadManger downLoaderWithURL:self.inputURL offset:requireStartOffset];
         return YES;
     }
-    
-    
     //4.响应部分数据给外界，并继续处理请求
     [self hanleAllLoadingRequests];
     return YES;
@@ -156,30 +154,30 @@
         requestedOffset = currentOffset;
 //    
     NSData *data = [NSData dataWithContentsOfFile:[LZBVideoFileManger tempFilePathWithURL:self.inputURL] options:NSDataReadingMappedIfSafe error:nil];
-    if(data == nil)
+    if(data.length == 0)
     {
         data = [NSData dataWithContentsOfFile:[LZBVideoFileManger cacheFilePathWithURL:self.inputURL] options:NSDataReadingMappedIfSafe error:nil];
     }
-//
-//    long long responseOffset = requestedOffset - self.downLoadManger.startOffset;
-//    long long responseLength = MIN(self.downLoadManger.startOffset + self.downLoadManger.downLoadSize - requestedOffset, requestedLength);
-//    //容错
-//    if(responseLength > NSUIntegerMax)
-//        responseLength = NSUIntegerMax;
-//    
-//    NSData *subData = [data subdataWithRange:NSMakeRange(responseOffset, responseLength)];
-//    [dataRequest respondWithData:subData];
+
+    NSUInteger responseOffset = requestedOffset - self.downLoadManger.startOffset;
+    NSUInteger unreadBytes = self.downLoadManger.downLoadSize - requestedOffset - self.downLoadManger.startOffset;
+//    NSUInteger unreadBytes = self.downLoadManger.startOffset + self.downLoadManger.downLoadSize - requestedOffset;
+    NSUInteger responseLength = MIN(unreadBytes, requestedLength);
+  
+    NSData *subData = [data subdataWithRange:NSMakeRange(responseOffset, responseLength)];
+    [dataRequest respondWithData:subData];
+    
 //    BOOL compeletion = requestedLength == responseLength;
 //    return compeletion;
     
-    // This is the total data we have from startOffset to whatever has been downloaded so far
-    NSUInteger unreadBytes = self.downLoadManger.downLoadSize - ((NSInteger)requestedOffset - self.downLoadManger.startOffset);
-    
-    // Respond with whatever is available if we can't satisfy the request fully yet
-    NSUInteger numberOfBytesToRespondWith = MIN((NSUInteger)dataRequest.requestedLength, unreadBytes);
-    
-    
-    [dataRequest respondWithData:[data subdataWithRange:NSMakeRange((NSUInteger)requestedOffset- self.downLoadManger.startOffset, (NSUInteger)numberOfBytesToRespondWith)]];
+//    // This is the total data we have from startOffset to whatever has been downloaded so far
+//    NSUInteger unreadBytes = self.downLoadManger.downLoadSize - ((NSInteger)requestedOffset - self.downLoadManger.startOffset);
+//    
+//    // Respond with whatever is available if we can't satisfy the request fully yet
+//    NSUInteger numberOfBytesToRespondWith = MIN((NSUInteger)dataRequest.requestedLength, unreadBytes);
+//    
+//    
+//    [dataRequest respondWithData:[data subdataWithRange:NSMakeRange((NSUInteger)requestedOffset- self.downLoadManger.startOffset, (NSUInteger)numberOfBytesToRespondWith)]];
     
     
     

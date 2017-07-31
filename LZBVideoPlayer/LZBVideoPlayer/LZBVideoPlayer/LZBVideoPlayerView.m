@@ -21,6 +21,7 @@
 
 @property (nonatomic, strong) NSURL *currentURL;
 
+@property (nonatomic, strong) LZBVideoPlayer *player;
 
 @end
 
@@ -43,7 +44,7 @@
     CGFloat currentPlayerLayerHeight = self.bounds.size.height - [LZBPlayerBottomControlView getPlayerBottomHeight];
     self.bottomControllView.frame = CGRectMake(0, currentPlayerLayerHeight, self.bounds.size.width, [LZBPlayerBottomControlView getPlayerBottomHeight]);
     
-    AVPlayerLayer *playerLayer = [LZBVideoPlayer shareInstance].currentPlayerLayer;
+    AVPlayerLayer *playerLayer = self.player.currentPlayerLayer;
     
     if(playerLayer != nil)
     {
@@ -61,8 +62,7 @@
 - (void)playWithURL:(NSURL *)url  isSupportCache:(BOOL)isSupportCache
 {
     self.currentURL = url;
-    [[LZBVideoPlayer shareInstance] playWithURL:url isSupportCache:isSupportCache];
-    [LZBVideoPlayer shareInstance].delegate = self;
+    [self.player playWithURL:url isSupportCache:isSupportCache];
     [self addLoadAnimation];
 }
 
@@ -148,7 +148,7 @@
 #pragma mark - 事件处理
 - (void)sliderValueChange:(UISlider *)slider
 {
-    [[LZBVideoPlayer shareInstance] seekWithProgress:slider.value];
+    [self.player seekWithProgress:slider.value];
 }
 
 - (void)lastButtonClick:(UIButton *)lastButton
@@ -161,7 +161,7 @@
     }
     index--;
     NSURL *url = self.playAddresses[index];
-    [[LZBVideoPlayer shareInstance] playWithURL:url isSupportCache:YES];
+    [self.player playWithURL:url isSupportCache:NO];
     self.currentURL = url;
     
 }
@@ -175,7 +175,7 @@
     }
     index++;
     NSURL *url = self.playAddresses[index];
-    [[LZBVideoPlayer shareInstance] playWithURL:url isSupportCache:YES];
+    [self.player playWithURL:url isSupportCache:NO];
     self.currentURL = url;
 }
 
@@ -184,13 +184,13 @@
     playPauseButton.selected = !playPauseButton.isSelected;
     if(playPauseButton.selected)
     {
-        [[LZBVideoPlayer shareInstance] pause];
+        [self.player pause];
         NSLog(@"UI是播放中状态");
     }
     
     else
     {
-      [[LZBVideoPlayer shareInstance] resume];
+      [self.player resume];
          NSLog(@"UI是暂停状态");
     }
     
@@ -204,11 +204,12 @@
 - (void)addPlayLayerToSuperView
 {
 
-    AVPlayerLayer *playerLayer = [LZBVideoPlayer shareInstance].currentPlayerLayer;
+    AVPlayerLayer *playerLayer = self.player.currentPlayerLayer;
     if(playerLayer != nil)
     {
         [self.layer insertSublayer:playerLayer atIndex:0];
         [self setNeedsLayout];
+        [self layoutIfNeeded];
         self.isAlreadyAdd = YES;
     }
 }
@@ -265,10 +266,12 @@
 - (void)updateUI
 {
     //更新UI
-    [self updateCurrentTimeLabel:[LZBVideoPlayer shareInstance].currentTime];  //当前时间
-    [self updateTotalTimeLabel:[LZBVideoPlayer shareInstance].totalTime]; //当前总时间
-    [self.bottomControllView.progressView setProgress:[LZBVideoPlayer shareInstance].loadedProgress animated:YES]; //当前加载进度
-    [self updateSlideValue:[LZBVideoPlayer shareInstance].progress]; //当前播放进度
+    [self updateCurrentTimeLabel:self.player.currentTime];  //当前时间
+    [self updateTotalTimeLabel:self.player.totalTime]; //当前总时间
+    [self.bottomControllView.progressView setProgress:self.player.loadedProgress animated:YES]; //当前加载进度
+    [self updateSlideValue:self.player.progress]; //当前播放进度
+    
+    NSLog(@"=========%ld",self.player.state);
 }
 
 #pragma mark - lazy
@@ -297,4 +300,14 @@
     [self removeLoadAnimation];
 }
 
+
+- (LZBVideoPlayer *)player
+{
+  if(_player == nil)
+  {
+      _player = [LZBVideoPlayer shareInstance];
+      _player.delegate = self;
+  }
+    return _player;
+}
 @end

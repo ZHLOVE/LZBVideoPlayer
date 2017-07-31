@@ -25,8 +25,16 @@
     [super viewDidLoad];
     [self.view addSubview:self.playerView];
     self.playerView.frame = CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.width);
-    [self.playerView playWithURL:self.playAddresses.firstObject isSupportCache:YES];
+    [self.playerView playWithURL:self.playAddresses.firstObject isSupportCache:NO];
     self.playerView.playAddresses = self.playAddresses;
+}
+
+
+
+- (void)viewDidLayoutSubviews
+{
+    [super viewDidLayoutSubviews];
+    self.playerView.frame = CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.width);
 }
 
 - (UIView *)showView

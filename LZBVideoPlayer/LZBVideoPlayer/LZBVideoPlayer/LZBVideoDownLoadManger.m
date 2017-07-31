@@ -54,7 +54,12 @@
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:self.url cachePolicy:NSURLRequestReloadIgnoringCacheData timeoutInterval:TIME_OUT_INTERVAL];
     
     //3.修改请求数据的范围
-    [request setValue:[NSString stringWithFormat:@"bytes=%lld-", self.startOffset] forHTTPHeaderField:@"Range"];
+    if(self.totalSize > 0)
+    {
+        [request addValue:[NSString stringWithFormat:@"bytes=%lld-%lld",self.startOffset, self.totalSize - 1] forHTTPHeaderField:@"Range"];
+    }
+    else
+       [request setValue:[NSString stringWithFormat:@"bytes=%lld-", self.startOffset] forHTTPHeaderField:@"Range"];
     //4.创建请求任务
     NSURLSessionDataTask *dataTask = [self.session dataTaskWithRequest:request];
     
@@ -75,7 +80,7 @@
     self.totalSize = [responseDict[@"Content-Length"] longLongValue];
     NSString *contentRangeString = [responseDict valueForKey:@"Content-Range"];
     if(contentRangeString.length != 0)
-        self.totalSize = [[contentRangeString componentsSeparatedByString:@"/"].lastObject longLongValue];;
+        self.totalSize = [[contentRangeString componentsSeparatedByString:@"/"].lastObject longLongValue];
     
     self.mimeType = response.MIMEType;
     

@@ -16,6 +16,8 @@ static LZBVideoPlayer *_instance;
 
 NSString *const LZBVideoPlayerPropertyStatus = @"status";
 NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyToKeepUp";
+NSString *const LZBVideoPlayerPropertyPlaybackBufferEmpty = @"playbackBufferEmpty";
+
 
 
 @interface LZBVideoPlayer()
@@ -29,6 +31,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 @property (nonatomic, strong) LZBVideoURLResourceLoader *resourceLoader;  // 数据源
 
 @property (nonatomic, assign) BOOL   isPauseByUser; //是否被用户暂停
+@property(nonatomic, assign)BOOL isBuffering;
 
 @end
 
@@ -70,6 +73,12 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
         } else {
             [self.currentPlayer replaceCurrentItemWithPlayerItem:self.currentItem];
         }
+        
+        if([[UIDevice currentDevice] systemVersion].intValue>=10){
+            //      增加下面这行可以解决iOS10兼容性问题了
+            self.currentPlayer.automaticallyWaitsToMinimizeStalling = NO;
+        }
+        
         self.currentPlayerLayer   = [AVPlayerLayer playerLayerWithPlayer:self.currentPlayer];
     }
 }
@@ -79,7 +88,8 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     if(self.currentPlayer == nil) return;
     [self.currentPlayer play];
     self.isPauseByUser = NO;
-    if(self.currentPlayer.currentItem && self.currentPlayer.currentItem.playbackLikelyToKeepUp)
+    NSLog(@"resume ------%d",self.currentPlayer.currentItem.playbackLikelyToKeepUp);
+    if(self.currentPlayer.currentItem && self.currentPlayer.currentItem.isPlaybackLikelyToKeepUp)
     {
         self.state = LZBVideoPlayerState_Playing;
     }
@@ -142,7 +152,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
         }
         else
         {
-            NSLog(@"取消加载");
+            //NSLog(@"取消加载");
         }
     }];
 }
@@ -185,9 +195,13 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
         BOOL keepUp = [change[NSKeyValueChangeNewKey] integerValue];
         [self monitorPropertyPlaybackLikelyToKeepUpWithItem:item isKeepUp:keepUp];
     }
+    else  if([keyPath isEqualToString:LZBVideoPlayerPropertyPlaybackBufferEmpty])
+    {
+        [self monitorPropertyPlaybackBufferEmptyWithItem:item];
+    }
     else
     {
-         //不做处理
+      //不做处理
     }
 }
 
@@ -218,13 +232,38 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
         {
             [self resume];
         }
-        NSLog(@"资源已经加载的差不多，可以播放了");
+       NSLog(@"资源已经加载的差不多，可以播放了");
+        self.isBuffering = NO;
     }
     else
     {
         NSLog(@"资源不够，还要继续加载");
         self.state = LZBVideoPlayerState_Loading;
     }
+}
+
+- (void)monitorPropertyPlaybackBufferEmptyWithItem:(AVPlayerItem *)playerItem
+{
+    NSLog(@"=====正在缓冲进度");
+     self.isBuffering = YES;
+    [self bufferingForSeconds];
+    self.state = LZBVideoPlayerState_Loading;
+}
+
+-(void)bufferingForSeconds{
+    
+    if (!_isBuffering) {
+        return;
+    }
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if(!self.isPauseByUser)
+            [self resume];
+        
+        if (!self.currentItem.isPlaybackLikelyToKeepUp) {
+            [self bufferingForSeconds];
+        }
+    });
+    
 }
 
 
@@ -399,13 +438,15 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
     {
         [_currentItem removeObserver:self forKeyPath:LZBVideoPlayerPropertyStatus];
         [_currentItem removeObserver:self forKeyPath:LZBVideoPlayerPropertyPlaybackLikelyToKeepUp];
+        [_currentItem removeObserver:self forKeyPath:LZBVideoPlayerPropertyPlaybackBufferEmpty];
         
     }
     
     _currentItem = currentItem;
     //增加现在的监听
-    [_currentItem addObserver:self forKeyPath:LZBVideoPlayerPropertyStatus options:NSKeyValueObservingOptionNew context:nil];
-    [_currentItem addObserver:self forKeyPath:LZBVideoPlayerPropertyPlaybackLikelyToKeepUp options:NSKeyValueObservingOptionNew context:nil];
+    [_currentItem addObserver:self forKeyPath:LZBVideoPlayerPropertyStatus options:NSKeyValueObservingOptionOld|NSKeyValueObservingOptionNew context:nil];
+    [_currentItem addObserver:self forKeyPath:LZBVideoPlayerPropertyPlaybackLikelyToKeepUp options:NSKeyValueObservingOptionOld|NSKeyValueObservingOptionNew  context:nil];
+    [_currentItem addObserver:self forKeyPath: LZBVideoPlayerPropertyPlaybackBufferEmpty options:NSKeyValueObservingOptionOld|NSKeyValueObservingOptionNew  context:nil];
 }
 
 
@@ -480,6 +521,7 @@ NSString *const LZBVideoPlayerPropertyPlaybackLikelyToKeepUp = @"playbackLikelyT
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [self resetParam];
+    NSLog(@"播放器销毁");
     
 }
 
